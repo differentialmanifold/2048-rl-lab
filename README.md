@@ -101,6 +101,31 @@ Each iteration collects eight complete games before updating. A2C makes one full
 
 Training seeds vary by episode: `10000000 + seed + iteration × 100000 + episode_index`. Fixing the experiment seed makes a run reproducible within the same execution setup; it does not repeat the same board every episode.
 
+### Batched collection and CPU workers
+
+A2C/PPO now advance multiple complete games together and infer their active boards as a batch. Each visited state is evaluated once; the following state's stored value supplies the GAE bootstrap. True termination uses zero, while time-limit truncation still evaluates its final state. Advantages are normalized across the entire update, including all workers.
+
+Worker count is automatic; no `--workers` argument is needed. The CPU budget respects process affinity where available and uses the performance-core count on Apple Silicon (physical-core count on other Macs). One core is reserved, then the count is capped by games per update. For example, 12 performance cores and 8 games select 8 workers. A single game runs in-process. This is a hardware-based heuristic, not a benchmark-derived optimum.
+
+Persistent CPU workers each batch their assigned games. Model parameters remain frozen during collection; optimization runs only in the parent process after every game completes. Worker inference uses CPU even if the parent trains on an accelerator. Policy validation reuses these workers. Startup output and training logs report the selected count. `--workers N` remains an optional override; `--workers 1` forces in-process batching. Resume re-detects the current machine rather than inheriting the checkpoint's old worker count; specify an override when reproducing a particular execution configuration.
+
+```sh
+.venv/bin/python -m algorithms.ppo \
+  --architecture rescnn --seed 0 --iterations 20000 \
+  --episodes-per-update 8 \
+  --eval-every 25 --eval-episodes 10 --plot-every 25 \
+  --save-dir checkpoints/ppo_rescnn_parallel
+
+# Continue an existing A2C experiment with CPU workers.
+.venv/bin/python -m algorithms.a2c \
+  --resume checkpoints/a2c_2048_v3/last.pt --iterations 30000 \
+  --save-dir checkpoints/a2c_mlp_parallel
+```
+
+Each episode has an independent action RNG derived from its episode seed; results are merged in episode order. Fixed configurations support reproducible resume. Compared with the earlier serial collector, action sampling and floating-point batch operations have changed, so new runs do not reproduce historical trajectories bit for bit. The published figures remain historical results. Changing worker counts or devices may also change floating-point results. Small workloads may not benefit from multiprocessing; compare `collect_seconds` and `update_seconds` in the logs. `validation.seconds` reports evaluation wall time.
+
+The standalone evaluator also selects CPU workers automatically, capped by its episode count, including for rollout MCTS. Changing validation seeds, episode count, or search budget on resume requires a fresh `--save-dir`; the resumed model is re-evaluated before selecting a new best checkpoint.
+
 ### Resume an experiment
 
 ```sh
@@ -148,7 +173,7 @@ Use a separate seed range for full-game evaluation:
   --episodes 100 --seed 2000000 --output experiments/a2c_test.json
 
 .venv/bin/python evaluate.py --agent mcts --budget 500 \
-  --episodes 20 --seed 2000000 --output experiments/mcts_test.json
+  --episodes 10 --seed 2000000 --output experiments/mcts_test.json
 ```
 
 The output includes episode lengths, board mass, merge scores, and tile-reaching rates. Search evaluation can take substantially longer than policy-only inference. For comparative studies, keep environment rules and test seeds aligned and report search budgets alongside results.
@@ -176,6 +201,7 @@ Both models use tile-exponent embeddings, legal-action masking, and policy/value
 | `common/models.py` | Network architectures and masked action distributions |
 | `common/rollout.py` | Complete-episode collection and GAE targets |
 | `common/evaluation.py` | Fixed-seed evaluation |
+| `common/parallel.py` | Persistent CPU workers and frozen model snapshots |
 | `common/training.py`, `common/checkpoints.py` | Experiment configuration, persistence, logging, and periodic plots |
 | `board.py`, `gym2048_env.py` | Game rules and Gymnasium interface |
 | `evaluate.py`, `plot.py`, `play.py` | Evaluation, visualization, and policy inspection |

@@ -101,6 +101,31 @@ python3 -m venv .venv
 
 训练环境的逐局 seed 为 `10000000 + seed + iteration × 100000 + episode_index`。固定实验 seed 用于在相同执行设置下复现训练，不表示每局重复同一棋盘。
 
+### 批量采样与 CPU 多进程
+
+A2C/PPO 现在同时推进多局完整游戏，对仍在运行的棋盘进行批量推理。每个访问状态只推理一次，下一状态已保存的 value 用作 GAE 自举值；真正终局取零，时间限制截断则额外计算最终状态的 value。优势在整个更新批次上统一归一化，包含所有 worker 的数据。
+
+默认自动选择 worker 数，不需要传入 `--workers`。CPU 预算在可用时遵守进程 CPU 亲和性限制，在 Apple Silicon 上以性能核数量作为预算，其他 Mac 使用物理核数量；预留一个核，再以每次更新的游戏局数为上限。例如 12 个性能核、每轮 8 局会选择 8 个 worker。只有一局时在主进程运行。这是按硬件选择的经验规则，并非通过基准测试搜索出的绝对最优值。
+
+持久 CPU 子进程分别对自己负责的游戏批量推理。采样期间参数固定，全部游戏完成后才在主进程更新模型。即使主进程使用加速器训练，worker 仍使用 CPU 推理；策略验证复用这些 worker。启动输出和训练日志会记录实际进程数。仍可用 `--workers N` 手动覆盖，`--workers 1` 强制主进程内批量推理。续训会重新检测当前电脑，而不继承 checkpoint 中旧的 worker 数；需要复现特定执行配置时可手动覆盖。
+
+```sh
+.venv/bin/python -m algorithms.ppo \
+  --architecture rescnn --seed 0 --iterations 20000 \
+  --episodes-per-update 8 \
+  --eval-every 25 --eval-episodes 10 --plot-every 25 \
+  --save-dir checkpoints/ppo_rescnn_parallel
+
+# 为已有 A2C 实验启用 CPU 多进程续训。
+.venv/bin/python -m algorithms.a2c \
+  --resume checkpoints/a2c_2048_v3/last.pt --iterations 30000 \
+  --save-dir checkpoints/a2c_mlp_parallel
+```
+
+每局使用从该局 seed 派生的独立动作随机数流，结果按游戏编号汇总。固定配置支持可复现续训。相比旧版串行采样，动作采样方式和浮点批量运算发生了变化，新训练不会逐位复现历史轨迹；上方图片仍是历史实验结果。改变 worker 数量或设备也可能影响浮点结果。小任务未必受益于多进程，可比较日志中的 `collect_seconds`（采样秒数）、`update_seconds`（更新秒数）及 `validation.seconds`（验证实际耗时）。
+
+独立评估入口也自动选择 CPU worker 数，以评估局数为上限，包括 rollout MCTS。续训时若改变验证 seed、局数或搜索预算，需要使用全新的 `--save-dir`，重新验证起点模型后再选择新的 best checkpoint。
+
 ### 继续实验
 
 ```sh
@@ -148,7 +173,7 @@ python3 -m venv .venv
   --episodes 100 --seed 2000000 --output experiments/a2c_test.json
 
 .venv/bin/python evaluate.py --agent mcts --budget 500 \
-  --episodes 20 --seed 2000000 --output experiments/mcts_test.json
+  --episodes 10 --seed 2000000 --output experiments/mcts_test.json
 ```
 
 输出包含步数、棋盘总量、合并得分和大块达标率。搜索评估通常比纯策略推理耗时更长。进行比较研究时，应统一环境规则和测试 seed，并随结果报告搜索预算。
@@ -176,6 +201,7 @@ python3 -m venv .venv
 | `common/models.py` | 网络结构和合法动作分布 |
 | `common/rollout.py` | 完整游戏采集与 GAE 目标 |
 | `common/evaluation.py` | 固定 seed 评估 |
+| `common/parallel.py` | 持久 CPU 子进程与固定模型快照 |
 | `common/training.py`、`common/checkpoints.py` | 实验配置、持久化、日志与定期绘图 |
 | `board.py`、`gym2048_env.py` | 游戏规则和 Gymnasium 接口 |
 | `evaluate.py`、`plot.py`、`play.py` | 评估、可视化与策略检查 |

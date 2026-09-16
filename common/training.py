@@ -31,6 +31,7 @@ def training_parser(description):
     parser.add_argument('--architecture', choices=['mlp', 'rescnn'])
     parser.add_argument('--seed', type=int)
     parser.add_argument('--device')
+    parser.add_argument('--workers', type=int, help='Override automatic CPU/game-based worker count; 1 uses in-process batching')
     parser.add_argument('--gamma', type=float)
     parser.add_argument('--lr', type=float)
     parser.add_argument('--eval-every', type=int)
@@ -59,16 +60,28 @@ def resolve_args(parser, algorithm, defaults, argv=None):
         if getattr(args, key, None) is None:
             setattr(args, key, default)
     if saved:
-        for key in ('architecture', 'seed', 'gamma', 'gae_lambda', 'episodes_per_update',
-                    'eval_seed', 'eval_episodes', 'eval_mcts_sims'):
+        for key in ('architecture', 'seed', 'gamma', 'gae_lambda', 'episodes_per_update'):
             if key in settings and getattr(args, key) != settings[key]:
                 parser.error(f'Resume must preserve {key}={settings[key]}')
+    if saved:
+        changed_eval = any(getattr(args, key, None) != settings.get(key)
+                           for key in ('eval_seed', 'eval_episodes', 'eval_mcts_sims'))
+        new_directory = args.save_dir and Path(args.save_dir).resolve() != Path(args.resume).parent.resolve()
+        if changed_eval and not new_directory:
+            parser.error('Changed evaluation settings require a new --save-dir to re-evaluate the baseline')
     if args.iterations < 1 or not 0 <= args.gamma <= 1 or args.lr <= 0:
         parser.error('Iterations and learning rate must be positive; gamma must be in [0, 1]')
     for key in ('eval_every', 'eval_episodes', 'plot_every', 'episodes_per_update', 'epochs',
                 'batch_size', 'self_play_games', 'mcts_sims', 'buffer_size', 'train_steps', 'eval_mcts_sims'):
         if hasattr(args, key) and getattr(args, key) < 1:
             parser.error(f'{key} must be positive')
+    from common.parallel import resolve_workers
+    args.workers_auto = args.workers is None
+    try:
+        args.workers = resolve_workers(args.workers, getattr(args, 'episodes_per_update',
+                                                           getattr(args, 'self_play_games', 1)))
+    except ValueError as error:
+        parser.error(str(error))
     return args
 
 
@@ -99,6 +112,16 @@ class TrainingRun:
         if self.start > args.iterations:
             raise ValueError(f'Already at iteration {self.start - 1}; increase --iterations')
         self.directory.mkdir(parents=True, exist_ok=True)
+        from common.parallel import GamePool
+        self.pool = GamePool(args.workers)
+        print(json.dumps(dict(event='workers', workers=args.workers,
+                              selection='auto' if args.workers_auto else 'manual')), flush=True)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.pool.close()
 
     def ensure_baseline(self, evaluator, extra=None):
         """A fork's best model must represent a model actually present in its directory."""
@@ -115,7 +138,8 @@ class TrainingRun:
     def record(self, metrics, extra=None):
         """Save each completed iteration, then refresh the plot at its own interval."""
         iteration = metrics['iteration']
-        metrics.update(algorithm=self.algorithm, architecture=self.args.architecture)
+        metrics.update(algorithm=self.algorithm, architecture=self.args.architecture,
+                       workers=self.args.workers)
         improved = False
         if 'validation' in metrics:
             value = metrics['validation']['mean_return']

@@ -1,4 +1,5 @@
 """A2C: collect fresh games, compute GAE, take one full-batch actor/critic step."""
+import time
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -27,26 +28,30 @@ def update(model, optimizer, rollout, entropy_coef=0.01, value_coef=0.5):
 
 
 def train(args):
-    run = TrainingRun(args, 'a2c')
-    model, optimizer = run.model, run.optimizer
-    env = Gym2048Env()
-    run.ensure_baseline(lambda: evaluate(model, args.eval_episodes, args.eval_seed))
-    for iteration in range(run.start, args.iterations + 1):
-        # 1. Freeze the policy while collecting complete games on fresh seeds.
-        rollout = collect_actor_critic(env, model, args.episodes_per_update, args.gamma,
-                                      10_000_000 + args.seed + iteration * 100_000, args.gae_lambda)
-        # 2. Use this batch once. The next iteration collects new trajectories.
-        metrics = update(model, optimizer, rollout, args.entropy_coef, args.value_coef)
-        metrics.update(iteration=iteration, transitions=len(rollout.actions),
-                       train_mean_return=float(np.mean([e['spawn_return'] for e in rollout.episodes])),
-                       train_mean_steps=float(np.mean([e['steps'] for e in rollout.episodes])),
-                       train_max_tile=max(e['max_value'] for e in rollout.episodes))
-        # 3. Evaluate the updated model without learning, then save/log/plot.
-        if run.should_validate(iteration):
-            metrics['validation'] = evaluate(model, args.eval_episodes, args.eval_seed)
-        run.record(metrics)
-    env.close()
-    return model
+    with TrainingRun(args, 'a2c') as run:
+        model, optimizer = run.model, run.optimizer
+        env = Gym2048Env()
+        run.ensure_baseline(lambda: evaluate(model, args.eval_episodes, args.eval_seed, pool=run.pool))
+        for iteration in range(run.start, args.iterations + 1):
+            # 1. Freeze the policy while collecting complete games on fresh seeds.
+            started = time.perf_counter()
+            rollout = collect_actor_critic(env, model, args.episodes_per_update, args.gamma,
+                                          10_000_000 + args.seed + iteration * 100_000, args.gae_lambda, pool=run.pool)
+            collect_seconds = time.perf_counter() - started
+            started = time.perf_counter()
+            # 2. Use this batch once. The next iteration collects new trajectories.
+            metrics = update(model, optimizer, rollout, args.entropy_coef, args.value_coef)
+            metrics.update(collect_seconds=collect_seconds, update_seconds=time.perf_counter() - started,
+                           iteration=iteration, transitions=len(rollout.actions),
+                           train_mean_return=float(np.mean([e['spawn_return'] for e in rollout.episodes])),
+                           train_mean_steps=float(np.mean([e['steps'] for e in rollout.episodes])),
+                           train_max_tile=max(e['max_value'] for e in rollout.episodes))
+            # 3. Evaluate the updated model without learning, then save/log/plot.
+            if run.should_validate(iteration):
+                metrics['validation'] = evaluate(model, args.eval_episodes, args.eval_seed, pool=run.pool)
+            run.record(metrics)
+        env.close()
+        return model
 
 
 def main(argv=None):

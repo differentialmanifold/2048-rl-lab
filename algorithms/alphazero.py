@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 import json
 import math
 import random
+import time
 
 import numpy as np
 import torch
@@ -19,7 +20,8 @@ from board import Board
 from gym2048_env import Gym2048Env
 from common.models import ActorCritic, REWARD_SCALE, preprocess_observation, masked_categorical
 from common.rollout import discounted_returns
-from common.evaluation import evaluate
+from common.evaluation import evaluate, summarize_results
+from common.parallel import model_snapshot, worker_model
 from common.training import TrainingRun, training_parser, resolve_args
 
 
@@ -184,13 +186,48 @@ def train_policy_value(model, optimizer, batch, device, l2_reg=1e-5):
     return float(policy_loss.detach()), float(value_loss.detach())
 
 
-def evaluate_search(model, episodes=20, seed=1_000_000, mcts_sims=100, gamma=1.0):
-    mcts = MCTS(model, next(model.parameters()).device, dirichlet_frac=0, gamma=gamma, seed=seed)
+def _self_play_worker(job):
+    snapshot, mcts_sims, temperature_moves, seed, gamma = job
+    return self_play_game(worker_model(snapshot), torch.device('cpu'), mcts_sims,
+                          temperature_moves, seed, gamma)
+
+
+def collect_self_play(model, device, games, mcts_sims, temperature_moves, seed, gamma, pool):
+    if pool.workers > 1:
+        snapshot = model_snapshot(model)
+        return pool.map(_self_play_worker, [(snapshot, mcts_sims, temperature_moves, seed + i, gamma)
+                                           for i in range(games)])
+    return [self_play_game(model, device, mcts_sims, temperature_moves, seed + i, gamma)
+            for i in range(games)]
+
+
+def _search_episode(model, seed, mcts_sims, gamma):
+    # Seed each game's search independently: worker assignment has no effect.
+    mcts = MCTS(model, next(model.parameters()).device, dirichlet_frac=0,
+                gamma=gamma, seed=seed)
     def action_fn(state, info, episode_seed):
         root = Node(1.0, matrix=state.copy(), legal_mask=np.array(info['can_move_dir']))
         mcts.run(root, mcts_sims)
         return softmax_visit_probs(root.children, 0).argmax()
-    return evaluate(model, episodes, seed, action_fn)
+    return evaluate(model, 1, seed, action_fn)['results'][0]
+
+
+def _search_worker(job):
+    snapshot, seed, mcts_sims, gamma = job
+    return _search_episode(worker_model(snapshot), seed, mcts_sims, gamma)
+
+
+def evaluate_search(model, episodes=10, seed=1_000_000, mcts_sims=100, gamma=1.0, pool=None):
+    if episodes < 1:
+        raise ValueError('Evaluation requires at least one episode')
+    start = time.perf_counter()
+    if pool is not None and pool.workers > 1:
+        snapshot = model_snapshot(model)
+        results = pool.map(_search_worker, [(snapshot, seed + i, mcts_sims, gamma)
+                                            for i in range(episodes)])
+    else:
+        results = [_search_episode(model, seed + i, mcts_sims, gamma) for i in range(episodes)]
+    return summarize_results(results, time.perf_counter() - start)
 
 
 
@@ -206,41 +243,46 @@ def augment_board_and_policy(state, policy):
 
 
 def train(args):
-    run = TrainingRun(args, 'alphazero')
-    model, optimizer, device = run.model, run.optimizer, run.device
-    replay = deque(maxlen=args.buffer_size)
-    if run.saved:
-        replay.extend(TrainExample(**ex) for ex in run.saved.get('replay', []))
-    run.ensure_baseline(lambda: evaluate_search(model, args.eval_episodes, args.eval_seed,
-                                               args.eval_mcts_sims, args.gamma),
-                        {'replay': [vars(ex) for ex in replay]})
-    for iteration in range(run.start, args.iterations + 1):
-        # 1. Self-play with PUCT search; keep visit targets and remaining returns.
-        summaries = []
-        for game in range(args.self_play_games):
-            examples, info = self_play_game(model, device, args.mcts_sims, args.temperature_moves,
-                                            10_000_000 + args.seed + iteration * 100_000 + game, args.gamma)
-            replay.extend(examples)
-            summaries.append(info)
-            print(json.dumps(dict(iteration=iteration, game=game + 1, steps=len(examples),
-                                  max_tile=info['max_value'])), flush=True)
-        # 2. Fit policy and value targets sampled from the replay buffer.
-        replay_list = list(replay)
-        losses = [train_policy_value(model, optimizer,
-                    random.sample(replay_list, min(args.batch_size, len(replay_list))), device)
-                  for _ in range(args.train_steps)]
-        metrics = dict(iteration=iteration, replay_size=len(replay), updates=args.train_steps,
-                       policy_loss=float(np.mean([p for p, _ in losses])),
-                       value_loss=float(np.mean([v for _, v in losses])),
-                       train_mean_return=float(np.mean([s['spawn_return'] for s in summaries])),
-                       train_mean_steps=float(np.mean([s['steps'] for s in summaries])),
-                       train_max_tile=max(s['max_value'] for s in summaries))
-        # 3. Validate without exploration noise; checkpoint includes replay for resume.
-        if run.should_validate(iteration):
-            metrics['validation'] = evaluate_search(model, args.eval_episodes, args.eval_seed,
-                                                     args.eval_mcts_sims, args.gamma)
-        run.record(metrics, {'replay': [vars(ex) for ex in replay]})
-    return model
+    with TrainingRun(args, 'alphazero') as run:
+        model, optimizer, device = run.model, run.optimizer, run.device
+        replay = deque(maxlen=args.buffer_size)
+        if run.saved:
+            replay.extend(TrainExample(**ex) for ex in run.saved.get('replay', []))
+        run.ensure_baseline(lambda: evaluate_search(model, args.eval_episodes, args.eval_seed,
+                                                   args.eval_mcts_sims, args.gamma, pool=run.pool),
+                            {'replay': [vars(ex) for ex in replay]})
+        for iteration in range(run.start, args.iterations + 1):
+            # 1. Self-play with PUCT search; keep visit targets and remaining returns.
+            summaries = []
+            started = time.perf_counter()
+            games = collect_self_play(model, device, args.self_play_games, args.mcts_sims,
+                                      args.temperature_moves,
+                                      10_000_000 + args.seed + iteration * 100_000, args.gamma, run.pool)
+            for game, (examples, info) in enumerate(games):
+                replay.extend(examples)
+                summaries.append(info)
+                print(json.dumps(dict(iteration=iteration, game=game + 1, steps=len(examples),
+                                      max_tile=info['max_value'])), flush=True)
+            collect_seconds = time.perf_counter() - started
+            started = time.perf_counter()
+            # 2. Fit policy and value targets sampled from the replay buffer.
+            replay_list = list(replay)
+            losses = [train_policy_value(model, optimizer,
+                        random.sample(replay_list, min(args.batch_size, len(replay_list))), device)
+                      for _ in range(args.train_steps)]
+            metrics = dict(collect_seconds=collect_seconds, update_seconds=time.perf_counter() - started,
+                           iteration=iteration, replay_size=len(replay), updates=args.train_steps,
+                           policy_loss=float(np.mean([p for p, _ in losses])),
+                           value_loss=float(np.mean([v for _, v in losses])),
+                           train_mean_return=float(np.mean([s['spawn_return'] for s in summaries])),
+                           train_mean_steps=float(np.mean([s['steps'] for s in summaries])),
+                           train_max_tile=max(s['max_value'] for s in summaries))
+            # 3. Validate without exploration noise; checkpoint includes replay for resume.
+            if run.should_validate(iteration):
+                metrics['validation'] = evaluate_search(model, args.eval_episodes, args.eval_seed,
+                                                         args.eval_mcts_sims, args.gamma, pool=run.pool)
+            run.record(metrics, {'replay': [vars(ex) for ex in replay]})
+        return model
 
 
 def main(argv=None):

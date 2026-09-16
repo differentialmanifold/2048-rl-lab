@@ -1,4 +1,5 @@
 """PPO: collect games, then optimize the clipped objective on shuffled minibatches."""
+import time
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -45,27 +46,31 @@ def update(model, optimizer, rollout, epochs=4, batch_size=256,
 
 
 def train(args):
-    run = TrainingRun(args, 'ppo')
-    model, optimizer = run.model, run.optimizer
-    env = Gym2048Env()
-    run.ensure_baseline(lambda: evaluate(model, args.eval_episodes, args.eval_seed))
-    for iteration in range(run.start, args.iterations + 1):
-        # 1. Collect with a fixed behavior policy and save its masked probabilities.
-        rollout = collect_actor_critic(env, model, args.episodes_per_update, args.gamma,
-                                      10_000_000 + args.seed + iteration * 100_000, args.gae_lambda)
-        # 2. Reuse the batch for a bounded number of epochs; KL may stop it earlier.
-        metrics = update(model, optimizer, rollout, args.epochs, args.batch_size,
-                         args.clip_range, args.entropy_coef, args.value_coef, args.target_kl)
-        metrics.update(iteration=iteration, transitions=len(rollout.actions),
-                       train_mean_return=float(np.mean([e['spawn_return'] for e in rollout.episodes])),
-                       train_mean_steps=float(np.mean([e['steps'] for e in rollout.episodes])),
-                       train_max_tile=max(e['max_value'] for e in rollout.episodes))
-        # 3. Evaluate, save and periodically overwrite the two-panel plot.
-        if run.should_validate(iteration):
-            metrics['validation'] = evaluate(model, args.eval_episodes, args.eval_seed)
-        run.record(metrics)
-    env.close()
-    return model
+    with TrainingRun(args, 'ppo') as run:
+        model, optimizer = run.model, run.optimizer
+        env = Gym2048Env()
+        run.ensure_baseline(lambda: evaluate(model, args.eval_episodes, args.eval_seed, pool=run.pool))
+        for iteration in range(run.start, args.iterations + 1):
+            # 1. Collect with a fixed behavior policy and save its masked probabilities.
+            started = time.perf_counter()
+            rollout = collect_actor_critic(env, model, args.episodes_per_update, args.gamma,
+                                          10_000_000 + args.seed + iteration * 100_000, args.gae_lambda, pool=run.pool)
+            collect_seconds = time.perf_counter() - started
+            started = time.perf_counter()
+            # 2. Reuse the batch for a bounded number of epochs; KL may stop it earlier.
+            metrics = update(model, optimizer, rollout, args.epochs, args.batch_size,
+                             args.clip_range, args.entropy_coef, args.value_coef, args.target_kl)
+            metrics.update(collect_seconds=collect_seconds, update_seconds=time.perf_counter() - started,
+                           iteration=iteration, transitions=len(rollout.actions),
+                           train_mean_return=float(np.mean([e['spawn_return'] for e in rollout.episodes])),
+                           train_mean_steps=float(np.mean([e['steps'] for e in rollout.episodes])),
+                           train_max_tile=max(e['max_value'] for e in rollout.episodes))
+            # 3. Evaluate, save and periodically overwrite the two-panel plot.
+            if run.should_validate(iteration):
+                metrics['validation'] = evaluate(model, args.eval_episodes, args.eval_seed, pool=run.pool)
+            run.record(metrics)
+        env.close()
+        return model
 
 
 def main(argv=None):
