@@ -9,12 +9,4 @@ __pycache__/
 *.pt
 !pretrained/*.pt
 experiments/
-# Publish only the three recorded research logs; keep training artifacts local.
-checkpoints/*
-!checkpoints/a2c_2048_v3/
-!checkpoints/ppo_2048_v3/
-!checkpoints/ppo_rescnn_seed0/
-checkpoints/*/*
-!checkpoints/a2c_2048_v3/metrics.jsonl
-!checkpoints/ppo_2048_v3/metrics.jsonl
-!checkpoints/ppo_rescnn_seed0/metrics.jsonl
+checkpoints/

@@ -4,63 +4,60 @@
 
 **在统一的 2048 环境中研究搜索与强化学习。**
 
-2048-rl-lab 是一个研究代码库，用于分析搜索预算、策略优化和网络结构如何影响随机序贯决策问题中的算法表现。项目提供独立的算法实现、可复现的训练与评估流程、真实训练曲线，以及用于检查策略行为的预训练模型。
+项目提供独立的算法实现、已记录的学习曲线、可复现的训练流程和预训练模型，以更长的存活时间和更大的累计方块总量为目标。
 
-## 研究范围
+## 算法
 
-| 方法 | 实现 | 模型与计算方式 |
+| 算法 | 核心流程 | 展示模型 |
 | --- | --- | --- |
-| [蒙特卡洛树搜索（MCTS）](algorithms/mcts.py) | UCT 选择、合法动作展开、随机模拟与回传 | 无神经网络；每步模拟次数可配置 |
-| [优势 Actor–Critic（A2C）](algorithms/a2c.py) | 完整游戏采集、GAE、一次全批次更新 | MLP，133,381 个参数 |
-| [近端策略优化（PPO）](algorithms/ppo.py) | GAE、随机打乱 minibatch、裁剪策略目标与 KL 检查 | MLP / ResCNN，133,381 / 175,877 个参数 |
+| [MCTS](algorithms/mcts_chance.py) | UCT 选择动作、重新采样随机落子、完整随机模拟 | 无神经网络 |
+| [A2C](algorithms/a2c.py) | 采集新轨迹、计算 TD(λ) 优势、一次 actor–critic 更新 | CNN2×2 |
+| [PPO](algorithms/ppo.py) | TD(λ) 优势、裁剪更新、随机 minibatch、KL 检查 | CNN2×2 / ViT |
+| [AlphaZero](algorithms/alphazero.py) | 使用游戏规则搜索、拟合访问次数策略、D4 对称增强 | CNN2×2 |
+| [MuZero](algorithms/muzero.py) | 学习表示与动力学、隐状态搜索、序列展开训练 | CNN2×2 |
 
-项目支持研究策略学习与在线搜索的差异、MLP 与卷积表示的影响，以及存活步数、棋盘总量和大块达标率之间的关系。每个算法的训练循环保留在独立文件中；公共模块处理模型、轨迹、评估和 checkpoint 管理。
+## 已记录的结果
 
-## 实验结果
+![各算法的存活步数和方块达标率](assets/overview.png)
 
-下列图片从已有训练日志重新生成。左图展示每局平均步数；右图展示验证局达到 **512、1024、2048、4096** 的比例。阈值包含更大的块：达到 2048 的局也计入 512 和 1024。
-
-| 方法 / 模型 | 训练迭代 | 选中模型迭代 | 验证局数 | 平均步数 | ≥2048 | ≥4096 |
+| 算法／模型 | 每步搜索次数 | 平均步数 | ≥2048 | ≥4096 | ≥8192 | ≥16384 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| A2C / MLP | 20,000 | 16,675 | 10 | 1,479.8 | 90% | 0% |
-| PPO / MLP | 20,000 | 18,900 | 10 | 1,188.3 | 70% | 0% |
-| PPO / ResCNN | 20,000 | 19,600 | 10 | 1,804.1 | 90% | 20% |
+| MCTS | 100 | 1,103.6 | 30% | 0% | 0% | 0% |
+| A2C · CNN2×2 † | 0 | 1,311.6 | 60% | 0% | 0% | 0% |
+| PPO · CNN2×2 | 0 | 5,765.4 | 100% | 100% | 80% | 0% |
+| PPO · ViT † | 0 | 1,165.5 | 60% | 0% | 0% | 0% |
+| AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
+| MuZero · CNN2×2 | 100 | 800.5 | 0% | 0% | 0% | 0% |
 
-**评估设置：** 以上实验使用训练 seed 0，验证环境固定使用 `1000000…1000009`。模型按验证累计生成总量的均值选择。这些是**用于选择 checkpoint 的验证结果**，不是独立测试结果，也不是多个训练 seed 的平均结果，不能据此得出算法或网络结构的一般性排名。模型元数据和逐局记录见 [results.json](assets/results.json)。
+所有行均使用 **10 局，环境 seed 为 `1000000…1000009`**。MCTS、AlphaZero 和 MuZero 每步搜索 100 次；A2C/PPO 直接使用策略网络。神经网络行对应随项目发布的 checkpoint 验证成绩，包含挑选 checkpoint 的影响。训练预算不同，这张图用于展示已记录的表现，不构成严格控制变量的排名。
 
-### A2C · MLP
+**快照日期：2026-09-22。** A2C/PPO 日志包含 20,000 次迭代；AlphaZero、MuZero 仍在训练，分别截取至第 542、5,402 次迭代。† A2C/CNN2×2 和 PPO/ViT 产生于当前默认训练配置之前，作为历史结果保留，不能将差异仅归因于模型结构。checkpoint 迭代数、逐局成绩和来源信息见 [results.json](assets/results.json)，MCTS 逐局成绩见 [mcts.json](assets/mcts.json)。
 
-![A2C MLP：存活步数与大块达标率](assets/a2c_mlp.png)
+下列图片根据公开的[日志快照](assets/logs)重画。左图展示训练与验证的平均步数；右图展示 **512 至 16384** 的累计达标率，出现更大方块时自动扩展。淡线表示原始数据，实线表示 50 次训练迭代或 5 次验证的滑动均值，星号标记最高验证 spawn 回报。某局达到大块，并不意味着选中的 checkpoint 能稳定达到它。MCTS 没有训练过程，因此在上方概览中展示。
 
-### PPO · MLP
+### A2C · CNN2×2
 
-![PPO MLP：存活步数与大块达标率](assets/ppo_mlp.png)
+![A2C · CNN2×2: survival and tile reach rates](assets/a2c_cnn2x2.png)
 
-### PPO · ResCNN
+### PPO · CNN2×2
 
-![PPO ResCNN：存活步数与大块达标率](assets/ppo_rescnn.png)
+![PPO · CNN2×2: survival and tile reach rates](assets/ppo_cnn2x2.png)
 
-横轴是训练迭代，不是游戏局数，也不是单次优化器更新。存活步数图包含训练原始值、最近 50 次迭代均值、固定 seed 验证值，以及最近 5 次验证均值。星号标记验证回报最高的模型，不一定对应平均存活步数最高的位置。MCTS 没有训练曲线，应在明确的搜索预算下评估其表现。
+### PPO · ViT
 
-## 环境与学习目标
+![PPO · ViT: survival and tile reach rates](assets/ppo_vit.png)
 
-[Gymnasium 环境](gym2048_env.py) 使用 4×4 棋盘和四个方向动作，并屏蔽非法动作。初始棋盘生成**一个块**；每次合法移动后，以 0.9 的概率生成 2，以 0.1 的概率生成 4。达到 2048 后继续运行，直到没有合法动作。
+### AlphaZero · CNN2×2
 
-当前学习目标是**累计生成的新块总量**，鼓励更长的存活时间和更大的最终棋盘总量。训练内部将奖励除以 128，默认使用 `gamma=1` 和 GAE `lambda=0.95`。日志中的回报使用未缩放的原始值。
+![AlphaZero · CNN2×2: survival and tile reach rates](assets/alphazero_cnn2x2.png)
 
-| 指标 | 定义 |
-| --- | --- |
-| `steps` / `mean_steps` | 单局步数 / 平均步数 |
-| `spawn_return` / `mean_return` | 新生成块的累计总量 / 其逐局平均值 |
-| `board_sum` | 最终棋盘所有数字之和，等于初始总量加上累计生成总量 |
-| `merge_score` | 标准 2048 得分：所有合并事件中，合并后块的值之和 |
-| `p512`、`p1024`、`p2048`、`p4096` | 达到至少相应块的游戏比例 |
+### MuZero · CNN2×2
 
-旧日志中的 `mean_score` 是 `mean_return` 的别名，**不是**标准合并分数。与使用标准 2048 分数的研究比较时，应使用 `merge_score`；与初始生成两个块的实验比较前，也需要统一初始条件。
+![MuZero · CNN2×2: survival and tile reach rates](assets/muzero_cnn2x2.png)
 
 ## 安装
 
-需要 **Python 3.10+**。在仓库根目录运行：
+需要 **Python 3.10+**，在仓库根目录执行：
 
 ```sh
 git clone https://github.com/differentialmanifold/2048-rl-lab.git
@@ -69,149 +66,143 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-默认使用 CPU。具备相应 GPU 环境时，可指定 `--device cuda`。
+训练依据 PyTorch 后端可用性自动选择 **CUDA → Apple MPS → CPU**，并根据 CPU 核数和游戏数量选择 worker 数量。采集和验证 worker 使用 CPU，父进程在所选设备上更新模型。可选覆盖参数：`--device cpu`、`--device mps`、`--device cuda:0`、`--workers 2`。
 
-## 训练
+## 环境与训练目标
 
-`--iterations` 必须指定，表示有限的**累计训练迭代目标**。每次从零开始的实验使用新的输出目录。
+4×4 棋盘初始生成一个块。每次合法移动后，以 0.9 的概率生成 2，以 0.1 的概率生成 4；达到 2048 后继续游戏，直到无合法动作。策略会屏蔽非法动作。奖励固定采用 **spawn mass**，即每次实际生成的 2 或 4。合并不改变总量，因此终局棋盘总和等于初始总量加累计奖励。
+
+所有神经网络算法默认使用 **TD(λ)，n=10、λ=0.5、γ=0.999**，价值标签混合一步至十步回报。A2C/PPO 使用采集时冻结的 critic 自举，AlphaZero/MuZero 使用保存的搜索价值。训练内部的奖励和价值除以 128，日志使用原始回报；真实终局自举为零。MuZero 还学习原始即时奖励，以及终局之后的零奖励序列。
+
+## 从零训练
+
+`--iterations` 指定有限的总迭代次数，每个新实验使用独立目录。以下五条命令使用当前默认配置，其中包括 `--td-steps 10 --td-lambda 0.5 --gamma 0.999`。
 
 ```sh
-# A2C / MLP
+# A2C · CNN2×2
 .venv/bin/python -m algorithms.a2c \
-  --architecture mlp --seed 0 --iterations 20000 \
-  --episodes-per-update 8 --eval-every 25 --eval-episodes 10 \
-  --plot-every 25 --save-dir checkpoints/a2c_mlp
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/a2c_cnn2x2_td_seed0
 
-# PPO / MLP
+# PPO · CNN2×2
 .venv/bin/python -m algorithms.ppo \
-  --architecture mlp --seed 0 --iterations 20000 \
-  --episodes-per-update 8 --epochs 4 --batch-size 256 \
-  --eval-every 25 --eval-episodes 10 --plot-every 25 \
-  --save-dir checkpoints/ppo_mlp
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/ppo_cnn2x2_td_seed0
 
-# PPO / ResCNN
+# PPO · ViT
 .venv/bin/python -m algorithms.ppo \
-  --architecture rescnn --seed 0 --iterations 20000 \
-  --episodes-per-update 8 --epochs 4 --batch-size 256 \
-  --eval-every 25 --eval-episodes 10 --plot-every 25 \
-  --save-dir checkpoints/ppo_rescnn
+  --architecture vit --seed 0 --iterations 20000 \
+  --save-dir checkpoints/ppo_vit_td_seed0
+
+# AlphaZero · CNN2×2
+.venv/bin/python -m algorithms.alphazero \
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/alphazero_cnn2x2_td_seed0
+
+# MuZero · CNN2×2
+.venv/bin/python -m algorithms.muzero \
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/muzero_cnn2x2_td_seed0
 ```
 
-每次迭代先采集八局完整游戏，再更新参数。A2C 对整批数据进行一次优化器更新；PPO 对随机打乱的 minibatch 最多训练四遍，默认 KL 阈值 `0.02` 可以提前结束当前批次的优化。每 25 次迭代及最后一次迭代后进行验证，使用更新后的策略，选择概率最大的合法动作。
+| 算法 | 每次迭代局数 | 参数更新 | 验证／绘图间隔 |
+| --- | ---: | --- | ---: |
+| A2C | 8 | 一次整批更新 | 25 次迭代 |
+| PPO | 8 | 最多四遍 minibatch；batch 256，KL 阈值 0.02 | 25 次迭代 |
+| AlphaZero | 8 | 100 个 minibatch，每批 256；回放 20,000 个状态 | 10 次迭代 |
+| MuZero | 8 | 100 个 minibatch，每批 64；模型展开 5 步；回放 128 局 | 10 次迭代 |
 
-训练环境的逐局 seed 为 `10000000 + seed + iteration × 100000 + episode_index`。固定实验 seed 用于在相同执行设置下复现训练，不表示每局重复同一棋盘。
+验证默认使用 10 个固定 seed 的游戏，训练结束时也会验证。搜索算法每步模拟 100 次。可通过 `--eval-every`、`--eval-episodes`、`--plot-every`、`--mcts-sims` 调整相应配置。训练 seed 0 标识实验，逐局 seed 随迭代改变，不会重复同一个游戏。
 
-### 批量采样与 CPU 多进程
-
-A2C/PPO 现在同时推进多局完整游戏，对仍在运行的棋盘进行批量推理。每个访问状态只推理一次，下一状态已保存的 value 用作 GAE 自举值；真正终局取零，时间限制截断则额外计算最终状态的 value。优势在整个更新批次上统一归一化，包含所有 worker 的数据。
-
-默认自动选择 worker 数，不需要传入 `--workers`。CPU 预算在可用时遵守进程 CPU 亲和性限制，在 Apple Silicon 上以性能核数量作为预算，其他 Mac 使用物理核数量；预留一个核，再以每次更新的游戏局数为上限。例如 12 个性能核、每轮 8 局会选择 8 个 worker。只有一局时在主进程运行。这是按硬件选择的经验规则，并非通过基准测试搜索出的绝对最优值。
-
-持久 CPU 子进程分别对自己负责的游戏批量推理。采样期间参数固定，全部游戏完成后才在主进程更新模型。即使主进程使用加速器训练，worker 仍使用 CPU 推理；策略验证复用这些 worker。启动输出和训练日志会记录实际进程数。仍可用 `--workers N` 手动覆盖，`--workers 1` 强制主进程内批量推理。续训会重新检测当前电脑，而不继承 checkpoint 中旧的 worker 数；需要复现特定执行配置时可手动覆盖。
+### 续训
 
 ```sh
 .venv/bin/python -m algorithms.ppo \
-  --architecture rescnn --seed 0 --iterations 20000 \
-  --episodes-per-update 8 \
-  --eval-every 25 --eval-episodes 10 --plot-every 25 \
-  --save-dir checkpoints/ppo_rescnn_parallel
-
-# 为已有 A2C 实验启用 CPU 多进程续训。
-.venv/bin/python -m algorithms.a2c \
-  --resume checkpoints/a2c_2048_v3/last.pt --iterations 30000 \
-  --save-dir checkpoints/a2c_mlp_parallel
+  --resume checkpoints/ppo_cnn2x2_td_seed0/last.pt --iterations 30000
 ```
 
-每局使用从该局 seed 派生的独立动作随机数流，结果按游戏编号汇总。固定配置支持可复现续训。相比旧版串行采样，动作采样方式和浮点批量运算发生了变化，新训练不会逐位复现历史轨迹；上方图片仍是历史实验结果。改变 worker 数量或设备也可能影响浮点结果。小任务未必受益于多进程，可比较日志中的 `collect_seconds`（采样秒数）、`update_seconds`（更新秒数）及 `validation.seconds`（验证实际耗时）。
-
-独立评估入口也自动选择 CPU worker 数，以评估局数为上限，包括 rollout MCTS。续训时若改变验证 seed、局数或搜索预算，需要使用全新的 `--save-dir`，重新验证起点模型后再选择新的 best checkpoint。
-
-### 继续实验
-
-```sh
-.venv/bin/python -m algorithms.ppo \
-  --resume checkpoints/ppo_rescnn/last.pt --iterations 30000 --plot-every 25
-```
-
-如果已经完成 20,000 次迭代，该命令会再训练 10,000 次。模型结构和未指定的超参数自动继承。已有 v3 checkpoint，例如 `checkpoints/ppo_rescnn_seed0/last.pt` 和 `checkpoints/a2c_2048_v3/last.pt`，仍可由对应算法的训练入口加载。若从旧 checkpoint 分支实验，增加新的 `--save-dir`。同一训练目录只应由一个进程写入。
-
-### Checkpoint 与绘图
+如果已经完成 20,000 次迭代，这条命令继续训练 10,000 次。恢复模型结构、未显式指定的超参数、优化器和随机状态；搜索算法还恢复回放数据。续训要求模型与 TD 配置一致。改变验证口径时使用新的 `--save-dir`，以重新计算该目录的基线。同一输出目录保持一个写入进程。
 
 | 输出 | 用途 |
 | --- | --- |
-| `metrics.jsonl` | 每个完成的迭代一条记录，按间隔附加验证结果 |
-| `last.pt` | 最近的模型、优化器和随机数状态，用于续训 |
-| `best.pt` | 平均验证回报最高的模型 |
-| `training.png` | 每 `--plot-every` 次迭代及最后一次迭代后覆盖 |
-
-绘图和验证间隔相互独立。可以从已有日志重画，也可以更新上方展示的图片：
+| `metrics.jsonl` | 已完成的训练迭代及定期验证结果 |
+| `last.pt` | 可续训的完整 checkpoint |
+| `best.pt` | 当前验证口径下平均 spawn 回报最高的模型 |
+| `training.png` | 运行中定期覆盖，结束时再次更新 |
 
 ```sh
-.venv/bin/python plot.py --logs checkpoints/a2c_2048_v3/metrics.jsonl --output assets/a2c_mlp.png --title 'A2C · MLP'
-.venv/bin/python plot.py --logs checkpoints/ppo_2048_v3/metrics.jsonl --output assets/ppo_mlp.png --title 'PPO · MLP'
-.venv/bin/python plot.py --logs checkpoints/ppo_rescnn_seed0/metrics.jsonl --output assets/ppo_rescnn.png --title 'PPO · ResCNN'
+.venv/bin/python plot.py --logs checkpoints/ppo_cnn2x2_td_seed0/metrics.jsonl
+.venv/bin/python plot.py --logs assets/logs/ppo_cnn2x2.jsonl \
+  --output assets/ppo_cnn2x2.png --title 'PPO · CNN2×2'
+.venv/bin/python plot.py --results assets/results.json --output assets/overview.png
 ```
 
-结果表格和 `assets/results.json` 对应导出模型时的快照，更换展示模型后应同步更新。导出精简推理模型：
+## 体验预训练模型
+
+各神经网络算法默认载入项目附带的 CNN2×2 模型，PPO 另提供 ViT。交互游戏**每次启动使用新的随机性**，只有需要复现时才显式传入 `--seed`。
+
+```sh
+.venv/bin/python play.py --agent mcts --budget 100
+.venv/bin/python play.py --agent a2c
+.venv/bin/python play.py --agent ppo
+.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_vit.pt
+.venv/bin/python play.py --agent alphazero --budget 100
+.venv/bin/python play.py --agent muzero --budget 100
+```
+
+按 Enter 执行一步，`H` 获取建议，`W/A/S/D` 手动移动，`P` 自动继续，`Q` 退出。添加 `--auto --delay 0.05` 可观察整局。体验自己训练的模型时，传入 `--checkpoint checkpoints/<run>/best.pt`。
+
+附带权重仅供推理，不包含续训所需状态。导出新模型：
 
 ```sh
 .venv/bin/python -m common.checkpoints \
-  --input checkpoints/ppo_rescnn/best.pt --output pretrained/ppo_rescnn.pt
+  --input checkpoints/ppo_cnn2x2_td_seed0/best.pt --output pretrained/ppo_cnn2x2.pt
 ```
 
-随仓库提供的推理模型约 0.5–0.7 MB/个，不含优化器和随机数状态，不能用于续训。完整训练 checkpoint 在本地生成，不纳入 Git。
+## 评估
 
-## 独立测试
-
-使用独立的 seed 范围，进行完整游戏评估：
+测试使用独立的 seed 范围：
 
 ```sh
-.venv/bin/python evaluate.py --agent ppo --checkpoint pretrained/ppo_rescnn.pt \
-  --episodes 100 --seed 2000000 --output experiments/ppo_rescnn_test.json
+.venv/bin/python evaluate.py --agent ppo --checkpoint pretrained/ppo_cnn2x2.pt \
+  --episodes 100 --seed 2000000 --output experiments/ppo_cnn2x2.json
 
-.venv/bin/python evaluate.py --agent a2c --checkpoint pretrained/a2c_mlp.pt \
-  --episodes 100 --seed 2000000 --output experiments/a2c_test.json
+.venv/bin/python evaluate.py --agent mcts --budget 100 \
+  --episodes 10 --seed 2000000 --output experiments/mcts.json
 
-.venv/bin/python evaluate.py --agent mcts --budget 500 \
-  --episodes 10 --seed 2000000 --output experiments/mcts_test.json
+.venv/bin/python evaluate.py --agent alphazero --budget 100 \
+  --episodes 10 --seed 2000000 --output experiments/alphazero.json
+
+.venv/bin/python evaluate.py --agent muzero --budget 100 \
+  --episodes 10 --seed 2000000 --output experiments/muzero.json
 ```
 
-输出包含步数、棋盘总量、合并得分和大块达标率。搜索评估通常比纯策略推理耗时更长。进行比较研究时，应统一环境规则和测试 seed，并随结果报告搜索预算。
+输出平均步数、累计生成总量、终局棋盘总和及各级方块的累计达标率，并记录搜索预算。独立评估默认使用 CPU，可指定 `--device auto`；多个 worker 仍使用 CPU。
 
-## 检查策略行为
+## 模型与目录
 
-终端接口用于定性检查策略决策。**每次启动默认从操作系统获取新的随机性**，用于环境和搜索，不需要指定固定 seed。
+两个编码器都使用方块指数 embedding，输出 256 维特征。CNN2×2 包含两层无 padding 卷积，空间尺寸 **4×4 → 3×3 → 2×2**，通道 **64 → 128**，使用投影残差、GroupNorm 和 SiLU。ViT 使用 16 个格子 token、宽度 96、两层四头 Transformer、二维轴向 RoPE，并按格子顺序读出。
 
-```sh
-.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_rescnn.pt
-.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_mlp.pt
-.venv/bin/python play.py --agent a2c --checkpoint pretrained/a2c_mlp.pt
-.venv/bin/python play.py --agent mcts --budget 500
-```
-
-直接按 Enter 执行算法的一步决策；`H` 查看建议；输入 `W/A/S/D` 后按 Enter 手动移动；`P` 自动继续；`Q` 退出。添加 `--auto --delay 0.05` 可观察完整轨迹。界面显示本次会话的 seed，需要复现特定轨迹时可显式传入 `--seed`。
-
-## 模型与代码组织
-
-两个模型均使用棋盘指数 embedding、合法动作屏蔽，以及策略和价值双头。[MLP](common/models.py) 包含两个 256 单元的隐藏层。ResCNN 在 embedding 外增加数值等级通道，经过 32 通道卷积和两个残差块，再将展平特征映射为 256 维。
+| 模型 | Actor–critic 参数量 | MuZero 参数量 |
+| --- | ---: | ---: |
+| CNN2×2 | 173,893 | 240,326 |
+| ViT | 187,085 | 253,518 |
 
 | 位置 | 职责 |
 | --- | --- |
-| `algorithms/` | 独立的搜索与训练实现 |
-| `common/models.py` | 网络结构和合法动作分布 |
-| `common/rollout.py` | 完整游戏采集与 GAE 目标 |
-| `common/evaluation.py` | 固定 seed 评估 |
-| `common/parallel.py` | 持久 CPU 子进程与固定模型快照 |
-| `common/training.py`、`common/checkpoints.py` | 实验配置、持久化、日志与定期绘图 |
+| `algorithms/` | 独立的 MCTS、A2C、PPO、AlphaZero、MuZero 流程 |
+| `common/models.py`、`common/targets.py`、`common/rollout.py` | 编码器、TD 目标和批量采集 |
+| `common/evaluation.py`、`common/parallel.py` | 评估和持久化 CPU worker |
+| `common/training.py`、`common/checkpoints.py` | 配置、续训、checkpoint 和日志 |
 | `board.py`、`gym2048_env.py` | 游戏规则和 Gymnasium 接口 |
-| `evaluate.py`、`plot.py`、`play.py` | 评估、可视化与策略检查 |
-| `assets/`、`pretrained/`、`checkpoints/` | 结果图片、推理权重与实验日志 |
-| `tests/` | 算法、可复现性、checkpoint 和输出回归测试 |
+| `play.py`、`evaluate.py`、`plot.py` | 交互体验、评估和绘图 |
+| `assets/`、`pretrained/` | 公开结果／日志快照和推理权重 |
+| `checkpoints/`、`experiments/` | 本地训练产物，不进入 Git |
 
 ```sh
 .venv/bin/python -m pytest -q
 ```
 
-## 开源协议
+## 协议
 
 [MIT](LICENSE)。Copyright © 2026 differentialmanifold。

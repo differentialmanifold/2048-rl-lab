@@ -26,10 +26,11 @@ def make_agent(agent, checkpoint=None, budget=500, seed=None, device='cpu'):
     """Return a state -> action controller plus its visible model provenance."""
     seed = resolve_seed(seed)
     if agent == 'mcts':
-        from algorithms.mcts import RolloutMCTS
-        planner = RolloutMCTS(budget, seed + 10_000_000)
-        return lambda state, info: planner.search(state)[0], f'MCTS · {budget} rollouts', dict(search_budget=budget)
-    path = Path(checkpoint) if checkpoint else ROOT / 'pretrained' / f'{agent}_mlp.pt'
+        from algorithms.mcts_chance import ChanceMCTS
+        planner = ChanceMCTS(budget, seed + 10_000_000)
+        return (lambda state, info: planner.search(state)[0], f'MCTS · {budget} rollouts',
+                dict(search_budget=budget, transition_model='resampled_chance'))
+    path = Path(checkpoint) if checkpoint else ROOT / 'pretrained' / f'{agent}_cnn2x2.pt'
     data = read_checkpoint(path)
     if data['algorithm'] != agent:
         raise ValueError(f'{path} contains {data["algorithm"]}, not {agent}')
@@ -38,12 +39,19 @@ def make_agent(agent, checkpoint=None, budget=500, seed=None, device='cpu'):
                     checkpoint=str(path), checkpoint_iteration=data['iteration'], search_budget=0)
     if agent == 'alphazero':
         from algorithms.alphazero import MCTS, Node, softmax_visit_probs
-        planner = MCTS(model, device, dirichlet_frac=0, gamma=data['config'].get('gamma', 1.), seed=seed)
+        gamma = data['config']['gamma']
+        planner = MCTS(model, device, dirichlet_frac=0, gamma=gamma, seed=seed)
         def action(state, info):
             root = Node(1., matrix=state.copy(), legal_mask=np.array(info['can_move_dir']))
             planner.run(root, budget)
             return int(softmax_visit_probs(root.children, 0).argmax())
         metadata['search_budget'] = budget
+        metadata['reward_objective'] = 'spawn_mass'
+    elif agent == 'muzero':
+        from algorithms.muzero import search_controller
+        action = search_controller(model, budget, data['config'].get('gamma', 1.),
+                                   data['config'].get('search_depth', 10), seed)
+        metadata.update(search_budget=budget, search_depth=data['config'].get('search_depth', 10))
     else:
         @torch.no_grad()
         def action(state, info):
@@ -83,7 +91,7 @@ def play(agent=None, seed=None, label='Human', auto=False, delay=.1, max_steps=N
                 if command == 'q':
                     break
                 if command in ('', 'h', 'p') and agent is None:
-                    message = 'Choose --agent a2c, ppo, alphazero or mcts to use an agent.'
+                    message = 'Choose --agent a2c, ppo, alphazero, muzero, mcts to use an agent.'
                     continue
                 if command == 'p':
                     auto = True
@@ -115,7 +123,7 @@ def play(agent=None, seed=None, label='Human', auto=False, delay=.1, max_steps=N
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--agent', choices=['human', 'mcts', 'a2c', 'ppo', 'alphazero'], default='human')
+    parser.add_argument('--agent', choices=['human', 'mcts', 'a2c', 'ppo', 'alphazero', 'muzero'], default='human')
     parser.add_argument('--checkpoint', help='Full checkpoint or bundled pretrained/*.pt export')
     parser.add_argument('--budget', type=int, default=500)
     parser.add_argument('--seed', type=int, help='Optional reproducible session; defaults to fresh OS randomness')

@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 import torch
-from common.models import ActorCritic
+from common.models import model_from_config
 
 
 def available_cpu_cores():
@@ -76,6 +76,6 @@ def worker_model(snapshot):
     config, weights = snapshot
     # Model initialization must not advance the caller's training RNG in serial mode.
     with torch.random.fork_rng(devices=[]):
-        model = ActorCritic(**config)
+        model = model_from_config(config)
     model.load_state_dict(weights)
     return model.eval()

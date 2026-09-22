@@ -6,17 +6,16 @@ import torch
 from board import Board
 from gym2048_env import Gym2048Env
 from common.models import ActorCritic, masked_categorical, preprocess_observation
-from common.rollout import compute_gae, collect_actor_critic, discounted_returns
+from common.rollout import collect_actor_critic
 from common.evaluation import evaluate
 from common.checkpoints import save_checkpoint, load_checkpoint
 from common.training import setup
 from algorithms.ppo import clipped_surrogate, update as update_ppo
 from algorithms.a2c import update as update_a2c
 from algorithms.alphazero import (
-    MCTS, Node, PolicyValueNet, softmax_visit_probs, self_play_game,
+    MCTS, Node, softmax_visit_probs, self_play_game,
     train_policy_value, augment_board_and_policy,
 )
-from algorithms.mcts import RolloutMCTS
 
 
 
@@ -72,12 +71,6 @@ def test_clipping_keeps_corrective_gradients_for_both_advantage_signs():
     torch.testing.assert_close(ratio.grad, torch.tensor([-1., 1., 0., 0.]))
 
 
-def test_gae_terminal_vs_truncation_and_no_cross_episode_leak():
-    adv, ret = compute_gae(torch.tensor([1., 2., 100.]), torch.tensor([.5, .7, .9]),
-                          torch.tensor([.7, 10., 20.]), torch.tensor([False, True, False]),
-                          torch.tensor([False, True, True]), gamma=.9, gae_lambda=1.)
-    torch.testing.assert_close(ret, torch.tensor([2.8, 2., 118.]))
-    torch.testing.assert_close(adv, ret - torch.tensor([.5, .7, .9]))
 
 
 @pytest.mark.parametrize('update', [update_a2c, update_ppo])
@@ -147,7 +140,7 @@ def test_all_eight_symmetries_preserve_legal_actions_and_afterstates():
 
 
 def test_alphazero_chance_resampling_and_modes():
-    model = PolicyValueNet()
+    model = ActorCritic()
     matrix = np.zeros((4, 4), dtype=int); matrix[0, 0] = 2
     root = Node(1., matrix=matrix)
     search = MCTS(model, torch.device('cpu'), dirichlet_frac=0, seed=3)
@@ -161,14 +154,15 @@ def test_alphazero_chance_resampling_and_modes():
     assert all(torch.isfinite(p).all() for p in model.parameters())
 
 
-def test_alphazero_backup_uses_spawn_not_merge_reward():
-    model = PolicyValueNet()
+def test_alphazero_backup_uses_spawn_reward():
+    model = ActorCritic()
     for parameter in model.parameters():
         parameter.data.zero_()
     matrix = np.array([[512, 512, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
     root = Node(1., matrix=matrix, legal_mask=np.array([True, False, False, False]))
     MCTS(model, torch.device('cpu'), dirichlet_frac=0).run(root, 1)
     assert root.children[0].q_value in (2 / 128, 4 / 128)
+    assert root.q_value == root.children[0].q_value
 
 
 def test_visit_temperature_power_law_and_missing_actions():
@@ -180,11 +174,12 @@ def test_visit_temperature_power_law_and_missing_actions():
 
 
 def test_alphazero_selfplay_train_and_terminal_return():
-    model = PolicyValueNet()
-    examples, info = self_play_game(model, torch.device('cpu'), 2, 10, seed=123)
+    model = ActorCritic()
+    examples, info = self_play_game(model, torch.device('cpu'), 2, 10, seed=123,
+                                    gamma=1., td_steps=10000, td_lambda=1.)
     assert len(examples) == info['steps']
     assert len(set(ex.value for ex in examples)) > 1
-    assert examples[-1].value in (2 / 128, 4 / 128)
+    assert examples[-1].value in (2/128, 4/128)
     assert examples[0].value == pytest.approx(info['spawn_return'] / 128)
     for ex in examples:
         assert ex.policy.sum() == pytest.approx(1)
@@ -221,14 +216,6 @@ def test_checkpoint_optimizer_rng_roundtrip(tmp_path):
     torch.testing.assert_close(model.policy_head.bias, torch.zeros(4))
 
 
-def test_demo_teacher_deterministic_and_does_not_consume_global_rng():
-    matrix = np.zeros((4, 4), dtype=int); matrix[0, 0] = 2
-    rng = random.getstate()
-    first = RolloutMCTS(2, 123).search(matrix)
-    second = RolloutMCTS(2, 123).search(matrix)
-    assert first[0] == second[0]
-    np.testing.assert_array_equal(first[1], second[1])
-    assert random.getstate() == rng
 
 
 def test_resumed_update_matches_uninterrupted_training(tmp_path):
@@ -272,7 +259,7 @@ def test_mass_conservation_and_evaluation_objective():
         assert 2 * row['steps'] <= row['spawn_return'] <= 4 * row['steps']
 
 
-def test_gae_collector_uses_spawn_rewards_even_with_large_merges():
+def test_td_collector_uses_spawn_rewards_even_with_large_merges():
     class TwoStepEnv:
         def reset(self, seed=None):
             self.t = 0
@@ -285,7 +272,7 @@ def test_gae_collector_uses_spawn_rewards_even_with_large_merges():
                 'merge_score': 8192, 'max_value': 4096}
 
     model = ActorCritic()
-    rollout = collect_actor_critic(TwoStepEnv(), model, 1, gamma=1., seed=0, gae_lambda=1.)
+    rollout = collect_actor_critic(TwoStepEnv(), model, 1, gamma=1., seed=0, td_lambda=1.)
     torch.testing.assert_close(rollout.returns, torch.tensor([6 / 128, 4 / 128]))
     assert rollout.episodes[0]['spawn_return'] == 6
 

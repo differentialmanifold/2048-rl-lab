@@ -1,4 +1,4 @@
-"""A2C: collect fresh games, compute GAE, take one full-batch actor/critic step."""
+"""A2C: collect fresh games, compute TD(lambda), take one full-batch actor/critic step."""
 import time
 import numpy as np
 import torch
@@ -36,12 +36,13 @@ def train(args):
             # 1. Freeze the policy while collecting complete games on fresh seeds.
             started = time.perf_counter()
             rollout = collect_actor_critic(env, model, args.episodes_per_update, args.gamma,
-                                          10_000_000 + args.seed + iteration * 100_000, args.gae_lambda, pool=run.pool)
+                                          10_000_000 + args.seed + iteration * 100_000, args.td_steps, args.td_lambda, pool=run.pool)
             collect_seconds = time.perf_counter() - started
             started = time.perf_counter()
             # 2. Use this batch once. The next iteration collects new trajectories.
             metrics = update(model, optimizer, rollout, args.entropy_coef, args.value_coef)
             metrics.update(collect_seconds=collect_seconds, update_seconds=time.perf_counter() - started,
+                           gamma=args.gamma, td_steps=args.td_steps, td_lambda=args.td_lambda,
                            iteration=iteration, transitions=len(rollout.actions),
                            train_mean_return=float(np.mean([e['spawn_return'] for e in rollout.episodes])),
                            train_mean_steps=float(np.mean([e['steps'] for e in rollout.episodes])),
@@ -57,10 +58,11 @@ def train(args):
 def main(argv=None):
     parser = training_parser(__doc__)
     parser.add_argument('--episodes-per-update', type=int)
-    parser.add_argument('--gae-lambda', type=float)
+    parser.add_argument('--td-lambda', type=float)
     parser.add_argument('--entropy-coef', type=float)
     parser.add_argument('--value-coef', type=float)
-    args = resolve_args(parser, 'a2c', dict(episodes_per_update=8, gae_lambda=.95,
+    parser.add_argument('--td-steps', type=int)
+    args = resolve_args(parser, 'a2c', dict(episodes_per_update=8, td_steps=10, td_lambda=.5,
                                           entropy_coef=.01, value_coef=.5), argv)
     return train(args)
 

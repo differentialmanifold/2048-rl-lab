@@ -51,16 +51,34 @@ def evaluate(model, episodes=10, seed=1_000_000, action_fn=None, pool=None):
     return summarize_results(results, time.perf_counter() - start)
 
 
+def tile_thresholds(max_tile=16384):
+    """Display through at least 16384; extend when a larger tile is observed."""
+    limit = max(16384, int(max_tile))
+    return tuple(2**power for power in range(9, (limit - 1).bit_length() + 1))
+
+
+def tile_reach_rate(metrics, tile):
+    """Recover new thresholds from per-game records in existing logs."""
+    if metrics.get('results'):
+        return float(np.mean([game['max_tile'] >= tile for game in metrics['results']]))
+    if f'p{tile}' in metrics:
+        return float(metrics[f'p{tile}'])
+    if 'max_tile' in metrics and metrics['max_tile'] < tile:
+        return 0.
+    return float('nan')  # Missing individual outcomes cannot determine a rate.
+
+
 def summarize_results(results, seconds):
     episodes, seed = len(results), results[0]['seed']
     tiles = [r['max_tile'] for r in results]
     mean_return = float(np.mean([r['spawn_return'] for r in results]))
     return dict(episodes=episodes, seed=seed, score_metric=REWARD_OBJECTIVE,
                 mean_score=mean_return, mean_return=mean_return,
+                mean_spawn_return=float(np.mean([r['spawn_return'] for r in results])),
                 mean_board_sum=float(np.mean([r['board_sum'] for r in results])),
                 mean_merge_score=float(np.mean([r['merge_score'] for r in results])),
                 mean_steps=float(np.mean([r['steps'] for r in results])), max_tile=max(tiles),
-                **{f'p{tile}': float(np.mean(np.array(tiles) >= tile)) for tile in (512, 1024, 2048, 4096)},
+                **{f'p{tile}': float(np.mean(np.array(tiles) >= tile)) for tile in tile_thresholds(max(tiles))},
                 seconds=seconds, ms_per_move=1000 * seconds / sum(r['steps'] for r in results), results=results)
 
 

@@ -19,7 +19,7 @@ def evaluate_game(job):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--agent', choices=['mcts', 'a2c', 'ppo', 'alphazero'], required=True)
+    parser.add_argument('--agent', choices=['mcts', 'a2c', 'ppo', 'alphazero', 'muzero'], required=True)
     parser.add_argument('--checkpoint')
     parser.add_argument('--episodes', type=int, default=100)
     parser.add_argument('--seed', type=int, default=2_000_000)
@@ -40,8 +40,8 @@ def main():
     with GamePool(args.workers) as pool:
         games = pool.map(evaluate_game, [(args.agent, args.checkpoint, args.budget,
                                          args.seed + i, worker_device) for i in range(args.episodes)])
-    results = summarize_results([row for row, _ in games], time.perf_counter() - start)
     metadata = games[0][1]
+    results = summarize_results([row for row, _ in games], time.perf_counter() - start)
     results.update(agent=args.agent, workers=args.workers, **metadata)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

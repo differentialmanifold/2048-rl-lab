@@ -2,65 +2,62 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**Study search and reinforcement learning on a shared 2048 environment.**
+**Search and reinforcement learning on a shared 2048 environment.**
 
-2048-rl-lab is a research codebase for examining how search budgets, policy optimization, and network architecture affect performance in a stochastic sequential decision problem. It provides independent algorithm implementations, reproducible training and evaluation, recorded learning curves, and pretrained checkpoints for inspecting learned behavior.
+A compact research codebase with independent algorithm implementations, recorded learning curves, reproducible training, and pretrained models. The objective is longer survival and greater accumulated tile mass.
 
-## Research scope
+## Algorithms
 
-| Method | Implementation | Model / computation |
+| Method | Core procedure | Displayed model |
 | --- | --- | --- |
-| [Monte Carlo Tree Search](algorithms/mcts.py) | UCT selection, legal-action expansion, random rollouts, and backup | No neural network; configurable rollouts per move |
-| [Advantage Actor–Critic (A2C)](algorithms/a2c.py) | Complete-episode collection, GAE, and one full-batch update | MLP, 133,381 parameters |
-| [Proximal Policy Optimization (PPO)](algorithms/ppo.py) | GAE, shuffled minibatches, clipped policy objective, and KL guard | MLP / ResCNN, 133,381 / 175,877 parameters |
+| [MCTS](algorithms/mcts_chance.py) | UCT action selection, resampled tile spawns, full random rollouts | No neural network |
+| [A2C](algorithms/a2c.py) | Fresh episodes, TD(λ) advantages, one actor–critic update | CNN2×2 |
+| [PPO](algorithms/ppo.py) | TD(λ) advantages, clipped updates, shuffled minibatches, KL guard | CNN2×2 / ViT |
+| [AlphaZero](algorithms/alphazero.py) | Search with the game rules, root-visit policy targets, D4 augmentation | CNN2×2 |
+| [MuZero](algorithms/muzero.py) | Learned representation and dynamics, latent search, recurrent training | CNN2×2 |
 
-The code supports studying policy learning versus online search, the effect of MLP and convolutional representations, and the relationship between survival, tile mass, and tile-reaching rates. Algorithm-specific training loops remain in their own files; shared modules handle models, trajectories, evaluation, and checkpoint management.
+## Recorded results
 
-## Experimental results
+![Survival and tile reach rates across algorithms](assets/overview.png)
 
-These figures are regenerated from the recorded training logs. The left panel shows mean episode length; the right panel shows the fraction of validation games reaching **512, 1024, 2048, and 4096**. Thresholds are inclusive: a game reaching 2048 also counts toward 512 and 1024.
-
-| Method / model | Training iterations | Selected checkpoint | Validation games | Mean moves | ≥2048 | ≥4096 |
+| Method / model | Search / move | Mean moves | ≥2048 | ≥4096 | ≥8192 | ≥16384 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| A2C / MLP | 20,000 | 16,675 | 10 | 1,479.8 | 90% | 0% |
-| PPO / MLP | 20,000 | 18,900 | 10 | 1,188.3 | 70% | 0% |
-| PPO / ResCNN | 20,000 | 19,600 | 10 | 1,804.1 | 90% | 20% |
+| MCTS | 100 | 1,103.6 | 30% | 0% | 0% | 0% |
+| A2C · CNN2×2 † | 0 | 1,311.6 | 60% | 0% | 0% | 0% |
+| PPO · CNN2×2 | 0 | 5,765.4 | 100% | 100% | 80% | 0% |
+| PPO · ViT † | 0 | 1,165.5 | 60% | 0% | 0% | 0% |
+| AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
+| MuZero · CNN2×2 | 100 | 800.5 | 0% | 0% | 0% | 0% |
 
-**Evaluation protocol:** the reported runs use training seed 0 and fixed validation environment seeds `1000000…1000009`. Checkpoints are selected by mean cumulative spawned tile mass. These are **checkpoint-selection validation results**, not held-out test results or averages over multiple training seeds. They do not establish a general ranking of algorithms or architectures. Checkpoint metadata and per-game records are available in [results.json](assets/results.json).
+All rows use **10 games with environment seeds `1000000…1000009`**. MCTS was evaluated at 100 simulations per move; AlphaZero and MuZero also use 100 simulations. A2C/PPO use the policy directly. The neural rows are the validation results of the bundled checkpoints, so they include checkpoint-selection effects. Training budgets differ; this is a descriptive comparison, not a controlled ranking.
 
-### A2C · MLP
+**Snapshot: 2026-09-22.** A2C/PPO logs contain 20,000 iterations; AlphaZero and MuZero are ongoing-run snapshots through iterations 542 and 5,402. † A2C/CNN2×2 and PPO/ViT were recorded before the current training defaults and are retained as historical results. Their difference cannot be attributed solely to architecture. Checkpoint iterations, per-game outcomes, and provenance are in [results.json](assets/results.json); MCTS outcomes are in [mcts.json](assets/mcts.json).
 
-![A2C MLP: survival and tile-reaching rates](assets/a2c_mlp.png)
+The following figures are regenerated from the published [log snapshots](assets/logs). The left panel shows training and validation episode length; the right panel shows inclusive tile-reaching rates from **512 through 16384**, extending automatically for larger tiles. Faint lines are raw observations; solid lines average 50 training iterations or five validation checks. The star marks the highest validation spawn return. Reaching a tile in one game does not imply that the selected checkpoint reaches it reliably. MCTS has no training curve and appears in the overview above.
 
-### PPO · MLP
+### A2C · CNN2×2
 
-![PPO MLP: survival and tile-reaching rates](assets/ppo_mlp.png)
+![A2C · CNN2×2: survival and tile reach rates](assets/a2c_cnn2x2.png)
 
-### PPO · ResCNN
+### PPO · CNN2×2
 
-![PPO ResCNN: survival and tile-reaching rates](assets/ppo_rescnn.png)
+![PPO · CNN2×2: survival and tile reach rates](assets/ppo_cnn2x2.png)
 
-The horizontal axis is the training iteration, not a game or an individual optimizer step. The survival panel includes raw training values, a trailing mean over 50 iterations, fixed-seed validation, and a trailing mean over 5 validation checks. The star identifies the checkpoint with the highest validation return, which need not have the highest mean survival. MCTS has no training curve; its performance is evaluated at a specified search budget.
+### PPO · ViT
 
-## Environment and objective
+![PPO · ViT: survival and tile reach rates](assets/ppo_vit.png)
 
-The [Gymnasium environment](gym2048_env.py) uses a 4×4 board and four directional actions. Illegal actions are masked. The environment starts with **one tile**; each valid move spawns a 2 with probability 0.9 or a 4 with probability 0.1. Games continue past 2048 until no legal move remains.
+### AlphaZero · CNN2×2
 
-The current learning objective is **cumulative spawned tile mass**, encouraging longer survival and greater final board mass. Rewards are divided by 128 internally, with `gamma=1` and GAE `lambda=0.95` by default. Reported returns use the original, unscaled values.
+![AlphaZero · CNN2×2: survival and tile reach rates](assets/alphazero_cnn2x2.png)
 
-| Metric | Definition |
-| --- | --- |
-| `steps` / `mean_steps` | Episode length / average episode length |
-| `spawn_return` / `mean_return` | Cumulative value of spawned tiles / its episode average |
-| `board_sum` | Sum of all tiles on the final board; initial mass plus spawned mass |
-| `merge_score` | Standard 2048 score: sum of the resulting tile values across all merges |
-| `p512`, `p1024`, `p2048`, `p4096` | Fraction of games reaching at least the specified tile |
+### MuZero · CNN2×2
 
-`mean_score` in older logs is an alias for `mean_return`, **not** the standard merge score. Studies using standard 2048 scores should compare `merge_score`. The one-tile initial condition also needs to be aligned before comparing against experiments that start with two tiles.
+![MuZero · CNN2×2: survival and tile reach rates](assets/muzero_cnn2x2.png)
 
 ## Installation
 
-Requires **Python 3.10+**. Run commands from the repository root:
+Requires **Python 3.10+**. Run commands from the repository root.
 
 ```sh
 git clone https://github.com/differentialmanifold/2048-rl-lab.git
@@ -69,144 +66,138 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-CPU is the default device. Use `--device cuda` for a compatible GPU environment.
+Training automatically selects **CUDA → Apple MPS → CPU**, based on available PyTorch backends. CPU worker count is chosen from the machine's cores and number of games. Collection and validation workers run on CPU; the parent performs training updates on the selected device. Optional overrides: `--device cpu`, `--device mps`, `--device cuda:0`, `--workers 2`.
 
-## Training
+## Environment and training objective
 
-`--iterations` specifies a required, finite **total iteration target**. Use a new output directory for each fresh experiment.
+The game starts with one tile on a 4×4 board. Each valid move spawns 2 with probability 0.9 or 4 with probability 0.1; reaching 2048 does not end the game. Illegal actions are masked. The reward is **spawned tile mass**: 2 or 4 per valid move. Merges preserve mass, so final board sum equals initial mass plus cumulative reward.
+
+All neural trainers default to **TD(λ), n=10, λ=0.5, γ=0.999**. Value targets mix one- through ten-step returns. A2C/PPO bootstrap from the frozen collection critic; AlphaZero/MuZero use recorded search values. Rewards and values use units of spawn mass / 128; logs report raw returns. True terminal bootstrap is zero. MuZero separately learns raw immediate rewards and zero-reward terminal tails.
+
+## Train from scratch
+
+`--iterations` is a finite total iteration target. Each fresh run needs its own output directory. The five commands below use the current defaults, including `--td-steps 10 --td-lambda 0.5 --gamma 0.999`.
 
 ```sh
-# A2C / MLP
+# A2C · CNN2×2
 .venv/bin/python -m algorithms.a2c \
-  --architecture mlp --seed 0 --iterations 20000 \
-  --episodes-per-update 8 --eval-every 25 --eval-episodes 10 \
-  --plot-every 25 --save-dir checkpoints/a2c_mlp
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/a2c_cnn2x2_td_seed0
 
-# PPO / MLP
+# PPO · CNN2×2
 .venv/bin/python -m algorithms.ppo \
-  --architecture mlp --seed 0 --iterations 20000 \
-  --episodes-per-update 8 --epochs 4 --batch-size 256 \
-  --eval-every 25 --eval-episodes 10 --plot-every 25 \
-  --save-dir checkpoints/ppo_mlp
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/ppo_cnn2x2_td_seed0
 
-# PPO / ResCNN
+# PPO · ViT
 .venv/bin/python -m algorithms.ppo \
-  --architecture rescnn --seed 0 --iterations 20000 \
-  --episodes-per-update 8 --epochs 4 --batch-size 256 \
-  --eval-every 25 --eval-episodes 10 --plot-every 25 \
-  --save-dir checkpoints/ppo_rescnn
+  --architecture vit --seed 0 --iterations 20000 \
+  --save-dir checkpoints/ppo_vit_td_seed0
+
+# AlphaZero · CNN2×2
+.venv/bin/python -m algorithms.alphazero \
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/alphazero_cnn2x2_td_seed0
+
+# MuZero · CNN2×2
+.venv/bin/python -m algorithms.muzero \
+  --architecture cnn2x2 --seed 0 --iterations 20000 \
+  --save-dir checkpoints/muzero_cnn2x2_td_seed0
 ```
 
-Each iteration collects eight complete games before updating. A2C makes one full-batch optimizer step. PPO makes up to four passes through shuffled minibatches; the default KL threshold of `0.02` can end optimization of the current batch early. Validation runs after every 25 iterations and at the final iteration, using the updated policy's highest-probability legal action.
+| Trainer | Games / iteration | Parameter updates | Validation / plot interval |
+| --- | ---: | --- | ---: |
+| A2C | 8 | One full-batch step | 25 iterations |
+| PPO | 8 | Up to four minibatch passes; batch 256, KL threshold 0.02 | 25 iterations |
+| AlphaZero | 8 | 100 minibatches of 256; replay 20,000 states | 10 iterations |
+| MuZero | 8 | 100 minibatches of 64; five-step model unroll; replay 128 games | 10 iterations |
 
-Training seeds vary by episode: `10000000 + seed + iteration × 100000 + episode_index`. Fixing the experiment seed makes a run reproducible within the same execution setup; it does not repeat the same board every episode.
+Validation uses ten fixed-seed games and also runs at completion. Search trainers use 100 simulations per move. `--eval-every`, `--eval-episodes`, `--plot-every`, and `--mcts-sims` override the relevant defaults. Training seed 0 identifies an experiment; individual game seeds change each iteration.
 
-### Batched collection and CPU workers
-
-A2C/PPO now advance multiple complete games together and infer their active boards as a batch. Each visited state is evaluated once; the following state's stored value supplies the GAE bootstrap. True termination uses zero, while time-limit truncation still evaluates its final state. Advantages are normalized across the entire update, including all workers.
-
-Worker count is automatic; no `--workers` argument is needed. The CPU budget respects process affinity where available and uses the performance-core count on Apple Silicon (physical-core count on other Macs). One core is reserved, then the count is capped by games per update. For example, 12 performance cores and 8 games select 8 workers. A single game runs in-process. This is a hardware-based heuristic, not a benchmark-derived optimum.
-
-Persistent CPU workers each batch their assigned games. Model parameters remain frozen during collection; optimization runs only in the parent process after every game completes. Worker inference uses CPU even if the parent trains on an accelerator. Policy validation reuses these workers. Startup output and training logs report the selected count. `--workers N` remains an optional override; `--workers 1` forces in-process batching. Resume re-detects the current machine rather than inheriting the checkpoint's old worker count; specify an override when reproducing a particular execution configuration.
+### Resume
 
 ```sh
 .venv/bin/python -m algorithms.ppo \
-  --architecture rescnn --seed 0 --iterations 20000 \
-  --episodes-per-update 8 \
-  --eval-every 25 --eval-episodes 10 --plot-every 25 \
-  --save-dir checkpoints/ppo_rescnn_parallel
-
-# Continue an existing A2C experiment with CPU workers.
-.venv/bin/python -m algorithms.a2c \
-  --resume checkpoints/a2c_2048_v3/last.pt --iterations 30000 \
-  --save-dir checkpoints/a2c_mlp_parallel
+  --resume checkpoints/ppo_cnn2x2_td_seed0/last.pt --iterations 30000
 ```
 
-Each episode has an independent action RNG derived from its episode seed; results are merged in episode order. Fixed configurations support reproducible resume. Compared with the earlier serial collector, action sampling and floating-point batch operations have changed, so new runs do not reproduce historical trajectories bit for bit. The published figures remain historical results. Changing worker counts or devices may also change floating-point results. Small workloads may not benefit from multiprocessing; compare `collect_seconds` and `update_seconds` in the logs. `validation.seconds` reports evaluation wall time.
-
-The standalone evaluator also selects CPU workers automatically, capped by its episode count, including for rollout MCTS. Changing validation seeds, episode count, or search budget on resume requires a fresh `--save-dir`; the resumed model is re-evaluated before selecting a new best checkpoint.
-
-### Resume an experiment
-
-```sh
-.venv/bin/python -m algorithms.ppo \
-  --resume checkpoints/ppo_rescnn/last.pt --iterations 30000 --plot-every 25
-```
-
-If 20,000 iterations have completed, this runs 10,000 more. Architecture and unspecified hyperparameters are inherited. Existing v3 checkpoints, such as `checkpoints/ppo_rescnn_seed0/last.pt` and `checkpoints/a2c_2048_v3/last.pt`, remain compatible with the corresponding trainer. Add a new `--save-dir` to branch from an older checkpoint. Only one process should write to a training directory.
-
-### Checkpoints and plots
+If 20,000 iterations are complete, this adds 10,000. Architecture and unspecified hyperparameters are restored along with optimizer/RNG state and, for search trainers, replay. Resume requires matching model and TD settings. Use a new `--save-dir` when changing the evaluation protocol so a new baseline is measured. Keep one writer per output directory.
 
 | Output | Purpose |
 | --- | --- |
-| `metrics.jsonl` | One record per completed iteration, with validation when scheduled |
-| `last.pt` | Latest model, optimizer, and RNG state for resuming |
-| `best.pt` | Model with the highest mean validation return |
-| `training.png` | Overwritten every `--plot-every` iterations and at the final iteration |
-
-Plotting and validation have independent intervals. Replot existing logs or update the figures displayed above:
+| `metrics.jsonl` | Completed training iterations and scheduled validation |
+| `last.pt` | Full checkpoint for resuming |
+| `best.pt` | Highest mean validation spawn return under the current protocol |
+| `training.png` | Replaced periodically and at completion |
 
 ```sh
-.venv/bin/python plot.py --logs checkpoints/a2c_2048_v3/metrics.jsonl --output assets/a2c_mlp.png --title 'A2C · MLP'
-.venv/bin/python plot.py --logs checkpoints/ppo_2048_v3/metrics.jsonl --output assets/ppo_mlp.png --title 'PPO · MLP'
-.venv/bin/python plot.py --logs checkpoints/ppo_rescnn_seed0/metrics.jsonl --output assets/ppo_rescnn.png --title 'PPO · ResCNN'
+.venv/bin/python plot.py --logs checkpoints/ppo_cnn2x2_td_seed0/metrics.jsonl
+.venv/bin/python plot.py --logs assets/logs/ppo_cnn2x2.jsonl \
+  --output assets/ppo_cnn2x2.png --title 'PPO · CNN2×2'
+.venv/bin/python plot.py --results assets/results.json --output assets/overview.png
 ```
 
-The result table and `assets/results.json` describe the exported checkpoint snapshots; update them when replacing the reported models. Export a compact inference checkpoint with:
+## Inspect pretrained agents
+
+The bundled CNN2×2 checkpoint is the default for each neural agent. PPO also provides ViT. Interactive sessions use **fresh randomness on every launch**; `--seed` is optional for reproducing a game.
+
+```sh
+.venv/bin/python play.py --agent mcts --budget 100
+.venv/bin/python play.py --agent a2c
+.venv/bin/python play.py --agent ppo
+.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_vit.pt
+.venv/bin/python play.py --agent alphazero --budget 100
+.venv/bin/python play.py --agent muzero --budget 100
+```
+
+Press Enter for one agent move, `H` for a suggestion, `W/A/S/D` for a manual move, `P` for autoplay, or `Q` to exit. Add `--auto --delay 0.05` to watch a complete game. To inspect your own training run, pass `--checkpoint checkpoints/<run>/best.pt`.
+
+Bundled weights are inference-only and cannot resume training. Export a new model with:
 
 ```sh
 .venv/bin/python -m common.checkpoints \
-  --input checkpoints/ppo_rescnn/best.pt --output pretrained/ppo_rescnn.pt
+  --input checkpoints/ppo_cnn2x2_td_seed0/best.pt --output pretrained/ppo_cnn2x2.pt
 ```
 
-Bundled inference checkpoints are approximately 0.5–0.7 MB each. They do not contain optimizer or RNG state and cannot resume training. Full training checkpoints are generated locally and excluded from Git.
+## Evaluate
 
-## Held-out evaluation
-
-Use a separate seed range for full-game evaluation:
+Use a separate seed range for testing:
 
 ```sh
-.venv/bin/python evaluate.py --agent ppo --checkpoint pretrained/ppo_rescnn.pt \
-  --episodes 100 --seed 2000000 --output experiments/ppo_rescnn_test.json
+.venv/bin/python evaluate.py --agent ppo --checkpoint pretrained/ppo_cnn2x2.pt \
+  --episodes 100 --seed 2000000 --output experiments/ppo_cnn2x2.json
 
-.venv/bin/python evaluate.py --agent a2c --checkpoint pretrained/a2c_mlp.pt \
-  --episodes 100 --seed 2000000 --output experiments/a2c_test.json
+.venv/bin/python evaluate.py --agent mcts --budget 100 \
+  --episodes 10 --seed 2000000 --output experiments/mcts.json
 
-.venv/bin/python evaluate.py --agent mcts --budget 500 \
-  --episodes 10 --seed 2000000 --output experiments/mcts_test.json
+.venv/bin/python evaluate.py --agent alphazero --budget 100 \
+  --episodes 10 --seed 2000000 --output experiments/alphazero.json
+
+.venv/bin/python evaluate.py --agent muzero --budget 100 \
+  --episodes 10 --seed 2000000 --output experiments/muzero.json
 ```
 
-The output includes episode lengths, board mass, merge scores, and tile-reaching rates. Search evaluation can take substantially longer than policy-only inference. For comparative studies, keep environment rules and test seeds aligned and report search budgets alongside results.
+The output reports mean moves, spawned mass, final board sum, and inclusive tile-reaching rates. Search budget is recorded alongside the result. Standalone evaluation defaults to CPU and accepts `--device auto`; multiple workers use CPU.
 
-## Inspect a learned policy
+## Models and layout
 
-The terminal interface supports qualitative inspection of policy decisions. **Each launch uses fresh OS randomness by default** for the environment and search. No fixed seed is required.
+Both encoders use tile-exponent embeddings and output 256 features. CNN2×2 applies two unpadded convolutions, **4×4 → 3×3 → 2×2**, with **64 → 128** channels, a projected residual, GroupNorm and SiLU. ViT uses 16 cell tokens, width 96, two four-head transformer blocks, axial 2D RoPE, and ordered cell readout.
 
-```sh
-.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_rescnn.pt
-.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_mlp.pt
-.venv/bin/python play.py --agent a2c --checkpoint pretrained/a2c_mlp.pt
-.venv/bin/python play.py --agent mcts --budget 500
-```
-
-Press Enter for one agent move, `H` for a suggestion, `W/A/S/D` followed by Enter for a manual move, `P` for automatic continuation, or `Q` to exit. Add `--auto --delay 0.05` to observe a full episode. The displayed session seed can optionally be supplied with `--seed` when reproducing a particular trajectory.
-
-## Models and code organization
-
-Both models use tile-exponent embeddings, legal-action masking, and policy/value heads. The [MLP](common/models.py) has two 256-unit hidden layers. The ResCNN adds a numeric rank channel to the embeddings, applies a 32-channel convolution and two residual blocks, then projects the flattened features to 256 units.
+| Model | Actor–critic parameters | MuZero parameters |
+| --- | ---: | ---: |
+| CNN2×2 | 173,893 | 240,326 |
+| ViT | 187,085 | 253,518 |
 
 | Location | Responsibility |
 | --- | --- |
-| `algorithms/` | Independent search and training implementations |
-| `common/models.py` | Network architectures and masked action distributions |
-| `common/rollout.py` | Complete-episode collection and GAE targets |
-| `common/evaluation.py` | Fixed-seed evaluation |
-| `common/parallel.py` | Persistent CPU workers and frozen model snapshots |
-| `common/training.py`, `common/checkpoints.py` | Experiment configuration, persistence, logging, and periodic plots |
+| `algorithms/` | Independent MCTS, A2C, PPO, AlphaZero, and MuZero flows |
+| `common/models.py`, `common/targets.py`, `common/rollout.py` | Encoders, TD targets, batched game collection |
+| `common/evaluation.py`, `common/parallel.py` | Evaluation and persistent CPU workers |
+| `common/training.py`, `common/checkpoints.py` | Configuration, resume, checkpoints and logging |
 | `board.py`, `gym2048_env.py` | Game rules and Gymnasium interface |
-| `evaluate.py`, `plot.py`, `play.py` | Evaluation, visualization, and policy inspection |
-| `assets/`, `pretrained/`, `checkpoints/` | Result figures, inference weights, and recorded experiment logs |
-| `tests/` | Algorithm, reproducibility, checkpoint, and output regression tests |
+| `play.py`, `evaluate.py`, `plot.py` | Interactive inspection, evaluation, plots |
+| `assets/`, `pretrained/` | Published results/log snapshots and inference weights |
+| `checkpoints/`, `experiments/` | Local training artifacts, excluded from Git |
 
 ```sh
 .venv/bin/python -m pytest -q

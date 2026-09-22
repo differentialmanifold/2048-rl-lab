@@ -1,0 +1,115 @@
+{
+  "episodes": 10,
+  "seed": 1000000,
+  "score_metric": "spawn_mass",
+  "mean_score": 2441.4,
+  "mean_return": 2441.4,
+  "mean_spawn_return": 2441.4,
+  "mean_board_sum": 2443.6,
+  "mean_merge_score": 19997.6,
+  "mean_steps": 1103.6,
+  "max_tile": 2048,
+  "p512": 1.0,
+  "p1024": 1.0,
+  "p2048": 0.3,
+  "p4096": 0.0,
+  "p8192": 0.0,
+  "p16384": 0.0,
+  "seconds": 309.3133162499871,
+  "ms_per_move": 28.027665481151423,
+  "results": [
+    {
+      "seed": 1000000,
+      "steps": 955,
+      "spawn_return": 2136.0,
+      "board_sum": 2138,
+      "max_tile": 1024,
+      "merge_score": 16312.0,
+      "legacy_score": 4.276
+    },
+    {
+      "seed": 1000001,
+      "steps": 920,
+      "spawn_return": 2050.0,
+      "board_sum": 2052,
+      "max_tile": 1024,
+      "merge_score": 15612.0,
+      "legacy_score": 4.104
+    },
+    {
+      "seed": 1000002,
+      "steps": 949,
+      "spawn_return": 2106.0,
+      "board_sum": 2108,
+      "max_tile": 1024,
+      "merge_score": 16136.0,
+      "legacy_score": 4.216
+    },
+    {
+      "seed": 1000003,
+      "steps": 936,
+      "spawn_return": 2070.0,
+      "board_sum": 2072,
+      "max_tile": 1024,
+      "merge_score": 16028.0,
+      "legacy_score": 4.144
+    },
+    {
+      "seed": 1000004,
+      "steps": 952,
+      "spawn_return": 2122.0,
+      "board_sum": 2124,
+      "max_tile": 1024,
+      "merge_score": 16268.0,
+      "legacy_score": 4.248
+    },
+    {
+      "seed": 1000005,
+      "steps": 1642,
+      "spawn_return": 3618.0,
+      "board_sum": 3622,
+      "max_tile": 2048,
+      "merge_score": 32136.0,
+      "legacy_score": 7.244
+    },
+    {
+      "seed": 1000006,
+      "steps": 1316,
+      "spawn_return": 2912.0,
+      "board_sum": 2914,
+      "max_tile": 2048,
+      "merge_score": 25692.0,
+      "legacy_score": 5.828
+    },
+    {
+      "seed": 1000007,
+      "steps": 912,
+      "spawn_return": 1978.0,
+      "board_sum": 1980,
+      "max_tile": 1024,
+      "merge_score": 15460.0,
+      "legacy_score": 3.96
+    },
+    {
+      "seed": 1000008,
+      "steps": 787,
+      "spawn_return": 1790.0,
+      "board_sum": 1792,
+      "max_tile": 1024,
+      "merge_score": 14004.0,
+      "legacy_score": 3.584
+    },
+    {
+      "seed": 1000009,
+      "steps": 1667,
+      "spawn_return": 3632.0,
+      "board_sum": 3634,
+      "max_tile": 2048,
+      "merge_score": 32328.0,
+      "legacy_score": 7.268
+    }
+  ],
+  "agent": "mcts",
+  "workers": 2,
+  "search_budget": 100
+}

@@ -35,7 +35,7 @@ def test_one_forward_per_state_and_bootstrap_only_for_truncation():
     model.value_head.bias.data.fill_(3.)
     inputs = []
     hook = model.register_forward_pre_hook(lambda _, args: inputs.append(args[0].shape))
-    rollout = collect_actor_critic(ShortGames(), model, 3, 1., seed=0, gae_lambda=1.)
+    rollout = collect_actor_critic(ShortGames(), model, 3, 1., seed=0, td_lambda=1.)
     hook.remove()
     # Three games of lengths 1, 2, 3; games 0 and 2 truncate and need one bootstrap.
     assert inputs == [torch.Size([3, 16]), torch.Size([16]), torch.Size([2, 16]),
@@ -82,7 +82,7 @@ def test_parallel_search_games_and_validation_match_serial():
 def test_parallel_checkpoint_resume(tmp_path, monkeypatch, trainer):
     import plot
     monkeypatch.setattr(plot, 'plot_training', lambda *a, **k: None)
-    options = ['--workers', '2', '--eval-episodes', '2', '--eval-every', '1', '--seed', '7']
+    options = ['--device', 'cpu', '--workers', '2', '--eval-episodes', '2', '--eval-every', '1', '--seed', '7']
     if trainer is alphazero:
         options += ['--self-play-games', '2', '--mcts-sims', '2', '--train-steps', '1',
                     '--batch-size', '16', '--eval-mcts-sims', '2']
@@ -104,7 +104,8 @@ def test_changed_validation_requires_branch_and_recomputes_best(tmp_path, monkey
     model = ActorCritic()
     path = tmp_path / 'last.pt'
     save_checkpoint(path, model, torch.optim.Adam(model.parameters()), 1, 'alphazero',
-                    dict(eval_episodes=20, eval_mcts_sims=200, mcts_sims=200), 99999.)
+                    dict(eval_episodes=20, eval_mcts_sims=200, mcts_sims=200,
+                         td_steps=10, td_lambda=.5, evaluation_metric='spawn_mass'), 99999.)
     options = ['--iterations', '2', '--resume', str(path), '--eval-episodes', '10',
                '--eval-mcts-sims', '100', '--mcts-sims', '100', '--self-play-games', '1',
                '--train-steps', '1']
@@ -118,7 +119,7 @@ def test_changed_validation_requires_branch_and_recomputes_best(tmp_path, monkey
     monkeypatch.setattr(alphazero, 'collect_self_play', lambda *args: [
         ([alphazero.TrainExample(np.array([[2, 0, 0, 0], *[[0]*4]*3]),
                                   np.array([0., 0., .5, .5]), 1.)],
-         {'spawn_return': 128., 'steps': 1, 'max_value': 2})])
+         {'spawn_return': 128., 'merge_score': 256., 'steps': 1, 'max_value': 2})])
     branch = tmp_path / 'branch'
     alphazero.main([*options, '--save-dir', str(branch)])
     assert calls == [(10, 100), (10, 100)]
@@ -182,7 +183,7 @@ def test_auto_workers_training_and_resume_match(tmp_path, monkeypatch):
     import plot
     monkeypatch.setattr(parallel, 'available_cpu_cores', lambda: 3)
     monkeypatch.setattr(plot, 'plot_training', lambda *a, **k: None)
-    options = ['--episodes-per-update', '4', '--eval-episodes', '2', '--eval-every', '1']
+    options = ['--device', 'cpu', '--episodes-per-update', '4', '--eval-episodes', '2', '--eval-every', '1']
     whole, split = tmp_path / 'whole', tmp_path / 'split'
     a2c.main(['--iterations', '2', '--save-dir', str(whole), *options])
     a2c.main(['--iterations', '1', '--save-dir', str(split), *options])

@@ -1,7 +1,7 @@
 """Stochastic AlphaZero-style 2048: PUCT action edges with sampled chance outcomes.
 
-Search backs up r + gamma*V, with the same spawn/128 return-to-go target used
-in training. Search outcomes never consume the real environment's random stream.
+Search uses spawn reward/128; targets mix up to ten bootstrapped returns.
+Search outcomes never consume the real environment's random stream.
 """
 from __future__ import annotations
 
@@ -18,19 +18,12 @@ from torch.nn import functional as F
 
 from board import Board
 from gym2048_env import Gym2048Env
-from common.models import ActorCritic, REWARD_SCALE, preprocess_observation, masked_categorical
-from common.rollout import discounted_returns
+from common.models import REWARD_OBJECTIVE, REWARD_SCALE, preprocess_observation, masked_categorical
+from common.checkpoints import read_checkpoint
 from common.evaluation import evaluate, summarize_results
 from common.parallel import model_snapshot, worker_model
 from common.training import TrainingRun, training_parser, resolve_args
-
-
-obs_to_tensor = preprocess_observation
-
-
-class PolicyValueNet(ActorCritic):
-    """Unbounded value head for remaining spawned mass, no batch statistics."""
-
+from common.targets import td_lambda_targets
 
 @dataclass
 class Node:
@@ -49,7 +42,7 @@ class Node:
 
 class MCTS:
     def __init__(self, model, device, c_puct=1.5, dirichlet_alpha=0.3,
-                 dirichlet_frac=0.25, gamma=1.0, seed=0):
+                 dirichlet_frac=0.25, gamma=0.999, seed=0):
         self.model, self.device = model, device
         self.c_puct, self.dirichlet_alpha = c_puct, dirichlet_alpha
         self.dirichlet_frac, self.gamma = dirichlet_frac, gamma
@@ -64,7 +57,7 @@ class MCTS:
             node.legal_mask = np.asarray(Board(node.matrix).can_move_dir, dtype=bool)
         if not np.any(node.legal_mask):
             return 0.0
-        logits, value = self.model(obs_to_tensor(node.matrix).to(self.device))
+        logits, value = self.model(preprocess_observation(node.matrix).to(self.device))
         probs = masked_categorical(logits, node.legal_mask).probs.cpu().numpy()
         for action in np.flatnonzero(node.legal_mask):
             node.children.setdefault(int(action), Node(prior=float(probs[action])))
@@ -114,6 +107,7 @@ class MCTS:
                     edge.visit_count += 1
                     edge.value_sum += value
                 root.visit_count += 1
+                root.value_sum += value
         finally:
             self.model.train(was_training)
 
@@ -145,35 +139,46 @@ class TrainExample:
     value: float
 
 
-def self_play_game(model, device, mcts_sims, temperature_moves, seed=0, gamma=1.0):
+def self_play_game(model, device, mcts_sims, temperature_moves, seed=0, gamma=0.999,
+                   td_steps=10, td_lambda=0.5):
     mcts = MCTS(model, device, gamma=gamma, seed=seed + 10_000_000)
     env = Gym2048Env()
     obs, info = env.reset(seed=seed)
     behavior_rng = np.random.default_rng(seed + 20_000_000)
-    examples, rewards = [], []
+    examples, rewards, search_values = [], [], []
+    spawn_return = 0.
     while True:
         root = Node(1.0, legal_mask=np.array(info['can_move_dir']), matrix=obs.copy())
         mcts.run(root, mcts_sims)
+        search_values.append(root.q_value)
         # Retain soft visit targets even after behavior switches to greedy.
         target = softmax_visit_probs(root.children, temperature=1.0)
         behavior = softmax_visit_probs(root.children, 1.0 if len(examples) < temperature_moves else 0.0)
         action = int(behavior_rng.choice(4, p=behavior))
         examples.append(TrainExample(obs.copy(), target, 0.0))
         obs, reward, done, truncated, info = env.step(action)
+        spawn_return += float(reward)
         rewards.append(float(reward) / REWARD_SCALE)
         if done or truncated:
+            final_value = 0.
+            if not done:  # The current environment never truncates; preserve bootstrap semantics.
+                final_root = Node(1., matrix=obs.copy(), legal_mask=np.array(info['can_move_dir']))
+                mcts.run(final_root, mcts_sims)
+                final_value = final_root.q_value
+            search_values.append(final_value)
             break
-    for example, value in zip(examples, discounted_returns(rewards, gamma)):
+    for example, value in zip(examples, td_lambda_targets(rewards, search_values, td_steps, gamma, td_lambda)):
         example.value = float(value)
-    return examples, dict(info, steps=len(examples), spawn_return=sum(rewards) * REWARD_SCALE)
+    env.close()
+    return examples, dict(info, steps=len(examples), spawn_return=spawn_return)
 
 
 def train_policy_value(model, optimizer, batch, device, l2_reg=1e-5):
     pairs = [random.choice(augment_board_and_policy(ex.state, ex.policy)) for ex in batch]
-    states = torch.stack([obs_to_tensor(s) for s, _ in pairs]).to(device)
-    targets = torch.tensor(np.stack([p for _, p in pairs]), device=device)
+    states = torch.stack([preprocess_observation(s) for s, _ in pairs]).to(device)
+    targets = torch.tensor(np.stack([p for _, p in pairs]), dtype=torch.float32, device=device)
     masks = torch.tensor([Board(s).can_move_dir for s, _ in pairs], device=device)
-    values_target = torch.tensor([ex.value for ex in batch], device=device)
+    values_target = torch.tensor([ex.value for ex in batch], dtype=torch.float32, device=device)
     model.train()
     logits, values = model(states)
     log_probs = masked_categorical(logits, masks).logits
@@ -187,17 +192,20 @@ def train_policy_value(model, optimizer, batch, device, l2_reg=1e-5):
 
 
 def _self_play_worker(job):
-    snapshot, mcts_sims, temperature_moves, seed, gamma = job
+    snapshot, mcts_sims, temperature_moves, seed, gamma, td_steps, td_lambda = job
     return self_play_game(worker_model(snapshot), torch.device('cpu'), mcts_sims,
-                          temperature_moves, seed, gamma)
+                          temperature_moves, seed, gamma, td_steps, td_lambda)
 
 
-def collect_self_play(model, device, games, mcts_sims, temperature_moves, seed, gamma, pool):
+def collect_self_play(model, device, games, mcts_sims, temperature_moves, seed, gamma, pool,
+                      td_steps=10, td_lambda=0.5):
     if pool.workers > 1:
         snapshot = model_snapshot(model)
-        return pool.map(_self_play_worker, [(snapshot, mcts_sims, temperature_moves, seed + i, gamma)
+        return pool.map(_self_play_worker, [(snapshot, mcts_sims, temperature_moves, seed + i, gamma,
+                                            td_steps, td_lambda)
                                            for i in range(games)])
-    return [self_play_game(model, device, mcts_sims, temperature_moves, seed + i, gamma)
+    return [self_play_game(model, device, mcts_sims, temperature_moves, seed + i, gamma,
+                           td_steps, td_lambda)
             for i in range(games)]
 
 
@@ -217,7 +225,7 @@ def _search_worker(job):
     return _search_episode(worker_model(snapshot), seed, mcts_sims, gamma)
 
 
-def evaluate_search(model, episodes=10, seed=1_000_000, mcts_sims=100, gamma=1.0, pool=None):
+def evaluate_search(model, episodes=10, seed=1_000_000, mcts_sims=100, gamma=0.999, pool=None):
     if episodes < 1:
         raise ValueError('Evaluation requires at least one episode')
     start = time.perf_counter()
@@ -252,12 +260,13 @@ def train(args):
                                                    args.eval_mcts_sims, args.gamma, pool=run.pool),
                             {'replay': [vars(ex) for ex in replay]})
         for iteration in range(run.start, args.iterations + 1):
-            # 1. Self-play with PUCT search; keep visit targets and remaining returns.
+            # 1. Self-play with PUCT search; keep visit targets and TD(lambda) returns.
             summaries = []
             started = time.perf_counter()
             games = collect_self_play(model, device, args.self_play_games, args.mcts_sims,
                                       args.temperature_moves,
-                                      10_000_000 + args.seed + iteration * 100_000, args.gamma, run.pool)
+                                      10_000_000 + args.seed + iteration * 100_000, args.gamma, run.pool,
+                                      args.td_steps, args.td_lambda)
             for game, (examples, info) in enumerate(games):
                 replay.extend(examples)
                 summaries.append(info)
@@ -270,11 +279,14 @@ def train(args):
             losses = [train_policy_value(model, optimizer,
                         random.sample(replay_list, min(args.batch_size, len(replay_list))), device)
                       for _ in range(args.train_steps)]
-            metrics = dict(collect_seconds=collect_seconds, update_seconds=time.perf_counter() - started,
+            metrics = dict(gamma=args.gamma, td_steps=args.td_steps, td_lambda=args.td_lambda,
+                           collect_seconds=collect_seconds, update_seconds=time.perf_counter() - started,
                            iteration=iteration, replay_size=len(replay), updates=args.train_steps,
+                           transitions=sum(s['steps'] for s in summaries),
                            policy_loss=float(np.mean([p for p, _ in losses])),
                            value_loss=float(np.mean([v for _, v in losses])),
                            train_mean_return=float(np.mean([s['spawn_return'] for s in summaries])),
+                           train_mean_spawn_return=float(np.mean([s['spawn_return'] for s in summaries])),
                            train_mean_steps=float(np.mean([s['steps'] for s in summaries])),
                            train_max_tile=max(s['max_value'] for s in summaries))
             # 3. Validate without exploration noise; checkpoint includes replay for resume.
@@ -288,11 +300,21 @@ def train(args):
 def main(argv=None):
     parser = training_parser(__doc__)
     for flag in ('self-play-games', 'mcts-sims', 'temperature-moves', 'buffer-size',
-                 'batch-size', 'train-steps', 'eval-mcts-sims'):
+                 'batch-size', 'train-steps', 'eval-mcts-sims', 'td-steps'):
         parser.add_argument('--' + flag, type=int)
+    parser.add_argument('--td-lambda', type=float)
     args = resolve_args(parser, 'alphazero', dict(self_play_games=8, mcts_sims=100,
-        temperature_moves=30, buffer_size=100_000, batch_size=256, train_steps=100,
+        gamma=.999, td_steps=10, td_lambda=.5, evaluation_metric=REWARD_OBJECTIVE,
+        temperature_moves=30, buffer_size=20_000, batch_size=256, train_steps=100,
         eval_every=10, plot_every=10, eval_mcts_sims=100), argv)
+    if args.resume:
+        saved = read_checkpoint(args.resume)
+        if saved['config'].get('evaluation_metric') != REWARD_OBJECTIVE:
+            from pathlib import Path
+            new_directory = args.save_dir and Path(args.save_dir).resolve() != Path(args.resume).parent.resolve()
+            if not new_directory:
+                parser.error('Changed checkpoint-selection metric requires a new --save-dir to re-evaluate the baseline')
+        args.evaluation_metric = REWARD_OBJECTIVE
     return train(args)
 
 

@@ -54,13 +54,14 @@ def train(args):
             # 1. Collect with a fixed behavior policy and save its masked probabilities.
             started = time.perf_counter()
             rollout = collect_actor_critic(env, model, args.episodes_per_update, args.gamma,
-                                          10_000_000 + args.seed + iteration * 100_000, args.gae_lambda, pool=run.pool)
+                                          10_000_000 + args.seed + iteration * 100_000, args.td_steps, args.td_lambda, pool=run.pool)
             collect_seconds = time.perf_counter() - started
             started = time.perf_counter()
             # 2. Reuse the batch for a bounded number of epochs; KL may stop it earlier.
             metrics = update(model, optimizer, rollout, args.epochs, args.batch_size,
                              args.clip_range, args.entropy_coef, args.value_coef, args.target_kl)
             metrics.update(collect_seconds=collect_seconds, update_seconds=time.perf_counter() - started,
+                           gamma=args.gamma, td_steps=args.td_steps, td_lambda=args.td_lambda,
                            iteration=iteration, transitions=len(rollout.actions),
                            train_mean_return=float(np.mean([e['spawn_return'] for e in rollout.episodes])),
                            train_mean_steps=float(np.mean([e['steps'] for e in rollout.episodes])),
@@ -77,10 +78,11 @@ def main(argv=None):
     parser = training_parser(__doc__)
     for flag in ('episodes-per-update', 'epochs', 'batch-size'):
         parser.add_argument('--' + flag, type=int)
-    for flag in ('gae-lambda', 'entropy-coef', 'value-coef', 'clip-range', 'target-kl'):
+    for flag in ('td-lambda', 'entropy-coef', 'value-coef', 'clip-range', 'target-kl'):
         parser.add_argument('--' + flag, type=float)
+    parser.add_argument('--td-steps', type=int)
     args = resolve_args(parser, 'ppo', dict(episodes_per_update=8, epochs=4, batch_size=256,
-        gae_lambda=.95, entropy_coef=.01, value_coef=.5, clip_range=.2, target_kl=.02), argv)
+        td_steps=10, td_lambda=.5, entropy_coef=.01, value_coef=.5, clip_range=.2, target_kl=.02), argv)
     return train(args)
 
 

@@ -10,9 +10,9 @@ from plot import read_metrics, moving_average
 from algorithms import a2c, ppo, alphazero
 
 
-def test_rescnn_batch_mask_consistency_gradient_and_checkpoint(tmp_path):
+def test_cnn2x2_batch_mask_consistency_gradient_and_checkpoint(tmp_path):
     setup(6)
-    model = ActorCritic(architecture='rescnn')
+    model = ActorCritic(architecture='cnn2x2')
     x = torch.arange(16).float()
     batch_logits, batch_values = model(torch.stack([x, x + 1]))
     logits, value = model(x)
@@ -24,30 +24,18 @@ def test_rescnn_batch_mask_consistency_gradient_and_checkpoint(tmp_path):
     torch.testing.assert_close(dist.logits[[0, 2]], old.logits[[0, 2]], atol=1e-6, rtol=1e-6)
     (-dist.log_prob(torch.tensor(0)) + value.square()).backward()
     assert model.policy_head.weight.grad.abs().sum() > 0
-    assert model.trunk[0].weight.grad.abs().sum() > 0
+    assert model.trunk[0].layers[0].weight.grad.abs().sum() > 0
     model.eval()
     torch.testing.assert_close(model(x)[0], logits)
     path = tmp_path / 'cnn.pt'
     save_checkpoint(path, model, torch.optim.Adam(model.parameters()), 1, 'ppo', {}, 1)
     restored = model_from_checkpoint(read_checkpoint(path))
-    assert restored.architecture == 'rescnn'
+    assert restored.architecture == 'cnn2x2'
     torch.testing.assert_close(restored(x)[0], model(x)[0])
     with pytest.raises(ValueError, match='different architecture'):
-        load_checkpoint(path, ActorCritic())
+        load_checkpoint(path, ActorCritic(architecture='vit'))
 
 
-def test_existing_v3_without_architecture_metadata_still_loads(tmp_path):
-    setup(4)
-    model = ActorCritic()
-    path = tmp_path / 'old_v3.pt'
-    save_checkpoint(path, model, torch.optim.Adam(model.parameters()), 1000, 'ppo', {}, 10)
-    data = read_checkpoint(path)
-    del data['model_config']
-    torch.save(data, path)
-    restored = model_from_checkpoint(read_checkpoint(path))
-    assert restored.architecture == 'mlp'
-    for key, value in model.state_dict().items():
-        torch.testing.assert_close(value, restored.state_dict()[key], atol=0, rtol=0)
 
 
 def test_plot_reading_preserves_real_iterations_and_missing_values(tmp_path):
@@ -65,7 +53,7 @@ def test_periodic_plot_and_final_validation(tmp_path, monkeypatch):
     monkeypatch.setattr(plot, 'plot_training', lambda logs, **kwargs:
                         plotted.append(read_metrics(logs)[-1]['iteration']))
     directory = tmp_path / 'a2c'
-    a2c.main(['--iterations', '3', '--episodes-per-update', '1', '--eval-every', '2',
+    a2c.main(['--device', 'cpu', '--iterations', '3', '--episodes-per-update', '1', '--eval-every', '2',
               '--eval-episodes', '1', '--plot-every', '2', '--save-dir', str(directory)])
     rows = read_metrics(directory / 'metrics.jsonl')
     assert plotted == [2, 3]  # Plot before the run ends, and again at its final iteration.
@@ -78,7 +66,7 @@ def test_periodic_plot_and_final_validation(tmp_path, monkeypatch):
 def test_fixed_iteration_resume_matches_uninterrupted(tmp_path, monkeypatch, trainer):
     import plot
     monkeypatch.setattr(plot, 'plot_training', lambda *a, **k: None)
-    options = ['--episodes-per-update', '1', '--eval-episodes', '1', '--eval-every', '1', '--seed', '7']
+    options = ['--device', 'cpu', '--episodes-per-update', '1', '--eval-episodes', '1', '--eval-every', '1', '--seed', '7']
     whole, split = tmp_path / 'whole', tmp_path / 'split'
     trainer.main(['--iterations', '3', '--save-dir', str(whole), *options])
     trainer.main(['--iterations', '2', '--save-dir', str(split), *options])
@@ -97,7 +85,7 @@ def test_resume_branch_baseline_and_rewind_guard(tmp_path, monkeypatch):
     model = ActorCritic()
     source = tmp_path / 'source.pt'
     save_checkpoint(source, model, torch.optim.Adam(model.parameters()), 1, 'ppo',
-                    {'episodes_per_update': 1, 'eval_episodes': 1}, 9999)
+                    {'episodes_per_update': 1, 'eval_episodes': 1, 'device': 'cpu', 'td_steps': 10, 'td_lambda': .5}, 9999)
     branch = tmp_path / 'branch'
     args = ['--iterations', '2', '--resume', str(source), '--save-dir', str(branch)]
     ppo.main(args)
@@ -111,7 +99,7 @@ def test_exported_models_keep_predictions_but_cannot_resume(tmp_path):
     from common.checkpoints import export_model
     from play import make_agent
     source, exported = tmp_path / 'last.pt', tmp_path / 'demo.pt'
-    model = ActorCritic(architecture='rescnn')
+    model = ActorCritic(architecture='cnn2x2')
     save_checkpoint(source, model, torch.optim.Adam(model.parameters()), 1, 'ppo', {}, 0)
     export_model(source, exported)
     data = torch.load(exported, weights_only=True)
@@ -123,7 +111,7 @@ def test_exported_models_keep_predictions_but_cannot_resume(tmp_path):
     board = np.zeros((4, 4), dtype=int)
     board[0, 0] = 2
     assert agent(board, {'can_move_dir': [False, False, True, True]}) in [2, 3]
-    assert 'RESCNN' in label
+    assert 'CNN2X2' in label
     with pytest.raises(ValueError, match='full training checkpoint'):
         ppo.main(['--iterations', '2', '--resume', str(exported)])
 
@@ -134,18 +122,12 @@ def test_removed_plateau_flag_is_rejected(trainer):
         trainer.main(['--iterations', '1', '--until-plateau'])
 
 
-def test_mcts_refactor_keeps_recorded_gym_actions_and_visits():
-    from algorithms.mcts import RolloutMCTS
-    matrix = np.array([[1024, 512, 256, 128], [64, 32, 16, 8], [4, 2, 4, 2], [0, 0, 2, 2]])
-    action, policy = RolloutMCTS(100, seed=2).search(matrix)
-    assert action == 2
-    np.testing.assert_allclose(policy, [0.23, 0.25, 0.26, 0.26])
 
 
 def test_alphazero_resume_keeps_replay_and_matches_uninterrupted(tmp_path, monkeypatch):
     import plot
     monkeypatch.setattr(plot, 'plot_training', lambda *a, **k: None)
-    options = ['--self-play-games', '1', '--mcts-sims', '2', '--train-steps', '1',
+    options = ['--device', 'cpu', '--self-play-games', '1', '--mcts-sims', '2', '--train-steps', '1',
                '--batch-size', '16', '--eval-every', '1', '--eval-episodes', '1', '--eval-mcts-sims', '2']
     whole, split = tmp_path / 'whole', tmp_path / 'split'
     alphazero.main(['--iterations', '2', '--save-dir', str(whole), *options])
@@ -153,6 +135,7 @@ def test_alphazero_resume_keeps_replay_and_matches_uninterrupted(tmp_path, monke
     first = read_checkpoint(split / 'last.pt')
     alphazero.main(['--iterations', '2', '--resume', str(split / 'last.pt')])
     expected, resumed = read_checkpoint(whole / 'last.pt'), read_checkpoint(split / 'last.pt')
+    assert resumed['reward_objective'] == 'spawn_mass'
     assert len(resumed['replay']) > len(first['replay'])
     assert len(resumed['replay']) == len(expected['replay'])
     for key in expected['model']:

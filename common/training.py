@@ -7,12 +7,24 @@ import random
 import numpy as np
 import torch
 
-from common.models import ActorCritic
+from common.models import ActorCritic, ARCHITECTURES, REWARD_OBJECTIVE
 from common.checkpoints import read_checkpoint, checkpoint_model_config, restore_checkpoint, save_checkpoint
 
 
-DEFAULTS = dict(architecture='mlp', seed=0, device='cpu', gamma=1.0, lr=3e-4,
+DEFAULTS = dict(architecture='cnn2x2', seed=0, device='auto', gamma=.999, lr=3e-4,
                 eval_every=25, eval_episodes=10, eval_seed=1_000_000, plot_every=25)
+
+
+def resolve_device(device='auto'):
+    """Select an available accelerator; explicit device requests are preserved."""
+    if device == 'auto':
+        if torch.cuda.is_available():
+            device = 'cuda'
+        elif torch.backends.mps.is_available():
+            device = 'mps'
+        else:
+            device = 'cpu'
+    return torch.device(device)
 
 
 def setup(seed, device='cpu'):
@@ -20,17 +32,15 @@ def setup(seed, device='cpu'):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.set_num_threads(1)
-    if device == 'auto':
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    return torch.device(device)
+    return resolve_device(device)
 
 
 def training_parser(description):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--iterations', type=int, required=True, help='Total iteration target, including completed iterations on resume')
-    parser.add_argument('--architecture', choices=['mlp', 'rescnn'])
+    parser.add_argument('--architecture', choices=ARCHITECTURES)
     parser.add_argument('--seed', type=int)
-    parser.add_argument('--device')
+    parser.add_argument('--device', help='Training device: auto (new-run default, CUDA > MPS > CPU), cpu, cuda, cuda:N, or mps; resume inherits the saved choice')
     parser.add_argument('--workers', type=int, help='Override automatic CPU/game-based worker count; 1 uses in-process batching')
     parser.add_argument('--gamma', type=float)
     parser.add_argument('--lr', type=float)
@@ -48,6 +58,8 @@ def resolve_args(parser, algorithm, defaults, argv=None):
     settings = {**DEFAULTS, **defaults}
     saved = read_checkpoint(args.resume) if args.resume else None
     if saved:
+        if 'optimizer' not in saved:
+            raise ValueError('Resume requires a full training checkpoint with optimizer state')
         if saved['algorithm'] != algorithm:
             parser.error('Checkpoint algorithm does not match this trainer')
         # Original v3 checkpoints used these names; preserve those runs.
@@ -60,9 +72,15 @@ def resolve_args(parser, algorithm, defaults, argv=None):
         if getattr(args, key, None) is None:
             setattr(args, key, default)
     if saved:
-        for key in ('architecture', 'seed', 'gamma', 'gae_lambda', 'episodes_per_update'):
+        for key in ('architecture', 'seed', 'gamma', 'td_steps', 'td_lambda', 'episodes_per_update'):
             if key in settings and getattr(args, key) != settings[key]:
                 parser.error(f'Resume must preserve {key}={settings[key]}')
+    if hasattr(args, 'td_steps') and (args.td_steps < 1 or not 0 <= args.td_lambda <= 1):
+        parser.error('td-steps must be positive; td-lambda must be in [0, 1]')
+    if saved and hasattr(args, 'td_steps'):
+        old = saved['config']
+        if not all(key in old for key in ('td_steps', 'td_lambda')) or old.get('value_target', 'td_lambda') != 'td_lambda' or old['td_steps'] < 1:
+            parser.error('Resume requires a checkpoint trained with finite TD(lambda) targets; start a fresh run')
     if saved:
         changed_eval = any(getattr(args, key, None) != settings.get(key)
                            for key in ('eval_seed', 'eval_episodes', 'eval_mcts_sims'))
@@ -86,12 +104,18 @@ def resolve_args(parser, algorithm, defaults, argv=None):
 
 
 class TrainingRun:
-    def __init__(self, args, algorithm):
+    def __init__(self, args, algorithm, model_factory=None, *, reward_objective=REWARD_OBJECTIVE):
         self.args, self.algorithm = args, algorithm
+        self.reward_objective = reward_objective
         self.device = setup(args.seed, args.device)
-        self.model = ActorCritic(architecture=args.architecture).to(self.device)
+        factory = model_factory or (lambda: ActorCritic(architecture=args.architecture))
+        self.model = factory().to(self.device)
+        self.parameter_count = sum(p.numel() for p in self.model.parameters())
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
         self.saved = read_checkpoint(args.resume) if args.resume else None
+        if self.saved and self.saved['reward_objective'] != self.reward_objective:
+            raise ValueError(f'Resume reward objective must be {self.reward_objective}; '
+                             'old value targets and replay are incompatible. Start a new run in a new --save-dir.')
         self.directory = Path(args.save_dir or (str(Path(args.resume).parent) if args.resume
                               else f'checkpoints/{algorithm}_{args.architecture}'))
         self.logs = self.directory / 'metrics.jsonl'
@@ -115,7 +139,9 @@ class TrainingRun:
         from common.parallel import GamePool
         self.pool = GamePool(args.workers)
         print(json.dumps(dict(event='workers', workers=args.workers,
-                              selection='auto' if args.workers_auto else 'manual')), flush=True)
+                              selection='auto' if args.workers_auto else 'manual',
+                              device=str(self.device), device_requested=args.device,
+                              architecture=args.architecture, parameters=self.parameter_count)), flush=True)
 
     def __enter__(self):
         return self
@@ -130,7 +156,8 @@ class TrainingRun:
             self.best = metrics['mean_return']
             (self.directory / 'resume_baseline.json').write_text(json.dumps(metrics, indent=2))
             save_checkpoint(self.directory / 'best.pt', self.model, self.optimizer,
-                            self.start - 1, self.algorithm, vars(self.args), self.best, extra)
+                            self.start - 1, self.algorithm, vars(self.args), self.best, extra,
+                            reward_objective=self.reward_objective)
 
     def should_validate(self, iteration):
         return iteration % self.args.eval_every == 0 or iteration == self.args.iterations
@@ -139,7 +166,8 @@ class TrainingRun:
         """Save each completed iteration, then refresh the plot at its own interval."""
         iteration = metrics['iteration']
         metrics.update(algorithm=self.algorithm, architecture=self.args.architecture,
-                       workers=self.args.workers)
+                       workers=self.args.workers, parameters=self.parameter_count,
+                       device=str(self.device), reward_objective=self.reward_objective)
         improved = False
         if 'validation' in metrics:
             value = metrics['validation']['mean_return']
@@ -150,10 +178,12 @@ class TrainingRun:
             metrics['stop_reason'] = 'iteration_limit'
         extra = {**(extra or {}), 'stop_reason': 'iteration_limit' if final else None}
         save_checkpoint(self.directory / 'last.pt', self.model, self.optimizer, iteration,
-                        self.algorithm, vars(self.args), self.best, extra)
+                        self.algorithm, vars(self.args), self.best, extra,
+                        reward_objective=self.reward_objective)
         if improved:
             save_checkpoint(self.directory / 'best.pt', self.model, self.optimizer, iteration,
-                            self.algorithm, vars(self.args), self.best, extra)
+                            self.algorithm, vars(self.args), self.best, extra,
+                            reward_objective=self.reward_objective)
         with self.logs.open('a') as out:
             out.write(json.dumps(metrics) + '\n')
         print(json.dumps(metrics), flush=True)

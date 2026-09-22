@@ -1,34 +1,14 @@
-"""Collect complete games and construct GAE targets for A2C/PPO."""
+"""Collect complete games and construct finite TD(lambda) targets for A2C/PPO."""
 from dataclasses import dataclass
 from copy import deepcopy
 import numpy as np
 import torch
 from common.models import REWARD_SCALE, preprocess_observation, masked_categorical
+from common.targets import td_lambda_targets
 
 
 def normalized(x):
     return (x - x.mean()) / x.std(unbiased=False).clamp_min(1e-8)
-
-
-def compute_gae(rewards, values, next_values, terminated, boundaries,
-                gamma=1.0, gae_lambda=0.95):
-    """Bootstrap time limits but never leak GAE across episode boundaries."""
-    advantages = torch.zeros_like(rewards)
-    carry = torch.zeros((), device=rewards.device)
-    for t in reversed(range(len(rewards))):
-        delta = rewards[t] + gamma * next_values[t] * (~terminated[t]) - values[t]
-        carry = delta + gamma * gae_lambda * (~boundaries[t]) * carry
-        advantages[t] = carry
-    return advantages, advantages + values
-
-
-def discounted_returns(rewards, gamma):
-    result = np.zeros(len(rewards), dtype=np.float32)
-    carry = 0.0
-    for i in reversed(range(len(rewards))):
-        carry = float(rewards[i]) + gamma * carry
-        result[i] = carry
-    return result
 
 
 @dataclass
@@ -44,8 +24,8 @@ class Rollout:
 
 
 @torch.no_grad()
-def collect_actor_critic(env, model, episodes, gamma, seed, gae_lambda=0.95, pool=None):
-    """Batch active games; evaluate each visited state once and shift values for GAE.
+def collect_actor_critic(env, model, episodes, gamma, seed, td_steps=10, td_lambda=.5, pool=None):
+    """Batch active games; evaluate each visited state once and reuse critic predictions for TD(lambda).
 
     Each episode has its own action RNG. Worker completion order cannot change
     the trajectory order. Normalize advantages once across the entire update.
@@ -56,13 +36,13 @@ def collect_actor_critic(env, model, episodes, gamma, seed, gae_lambda=0.95, poo
         from common.parallel import model_snapshot
         snapshot = model_snapshot(model)
         groups = np.array_split(np.arange(episodes), min(pool.workers, episodes))
-        jobs = [(snapshot, len(ids), gamma, seed + int(ids[0]), gae_lambda) for ids in groups]
+        jobs = [(snapshot, len(ids), gamma, seed + int(ids[0]), td_steps, td_lambda) for ids in groups]
         parts = pool.map(_collect_worker, jobs)
         device = next(model.parameters()).device
         tensors = [torch.cat([part[i] for part in parts]).to(device) for i in range(7)]
         summaries = [episode for part in parts for episode in part[7]]
     else:
-        *tensors, summaries = _collect_games(env, model, episodes, gamma, seed, gae_lambda)
+        *tensors, summaries = _collect_games(env, model, episodes, gamma, seed, td_steps, td_lambda)
     tensors[5] = normalized(tensors[5])
     return Rollout(*tensors, summaries)
 
@@ -70,12 +50,12 @@ def collect_actor_critic(env, model, episodes, gamma, seed, gae_lambda=0.95, poo
 def _collect_worker(job):
     from gym2048_env import Gym2048Env
     from common.parallel import worker_model
-    snapshot, episodes, gamma, seed, gae_lambda = job
-    return _collect_games(Gym2048Env(), worker_model(snapshot), episodes, gamma, seed, gae_lambda)
+    snapshot, episodes, gamma, seed, td_steps, td_lambda = job
+    return _collect_games(Gym2048Env(), worker_model(snapshot), episodes, gamma, seed, td_steps, td_lambda)
 
 
 @torch.no_grad()
-def _collect_games(env, model, episodes, gamma, seed, gae_lambda):
+def _collect_games(env, model, episodes, gamma, seed, td_steps, td_lambda):
     device = next(model.parameters()).device
     envs = [env] + [deepcopy(env) for _ in range(episodes - 1)]
     observations, infos, records = [], [], [[] for _ in envs]
@@ -123,13 +103,10 @@ def _collect_games(env, model, episodes, gamma, seed, gae_lambda):
         for col in range(5):
             output[col].append(torch.stack([row[col] for row in rows]))
         values = torch.stack([row[5] for row in rows])
-        next_values = torch.cat((values[1:], bootstrap.reshape(1)))
-        rewards = torch.tensor([row[6] for row in rows], device=device)
-        terminated = torch.tensor([row[7] for row in rows], device=device)
-        boundaries = torch.zeros_like(terminated)
-        boundaries[-1] = True
-        advantages, returns = compute_gae(rewards, values, next_values, terminated,
-                                          boundaries, gamma, gae_lambda)
+        state_values = torch.cat((values, bootstrap.reshape(1))).cpu().numpy()
+        targets = td_lambda_targets([row[6] for row in rows], state_values, td_steps, gamma, td_lambda)
+        returns = torch.as_tensor(targets, device=device)
+        advantages = returns - values
         output[5].append(advantages)
         output[6].append(returns)
     return (*[torch.cat(parts) for parts in output], summaries)
