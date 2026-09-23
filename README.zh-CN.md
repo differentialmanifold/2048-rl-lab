@@ -14,7 +14,6 @@
 | [A2C](algorithms/a2c.py) | 采集新轨迹、计算 TD(λ) 优势、一次 actor–critic 更新 | CNN2×2 |
 | [PPO](algorithms/ppo.py) | TD(λ) 优势、裁剪更新、随机 minibatch、KL 检查 | CNN2×2 / ViT |
 | [AlphaZero](algorithms/alphazero.py) | 使用游戏规则搜索、拟合访问次数策略、D4 对称增强 | CNN2×2 |
-| [MuZero](algorithms/muzero.py) | 学习表示与动力学、隐状态搜索、序列展开训练 | CNN2×2 |
 
 ## 已记录的结果
 
@@ -23,15 +22,14 @@
 | 算法／模型 | 每步搜索次数 | 平均步数 | ≥2048 | ≥4096 | ≥8192 | ≥16384 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | MCTS | 100 | 1,103.6 | 30% | 0% | 0% | 0% |
-| A2C · CNN2×2 † | 0 | 1,311.6 | 60% | 0% | 0% | 0% |
+| A2C · CNN2×2 | 0 | 2,664.5 | 100% | 60% | 10% | 0% |
 | PPO · CNN2×2 | 0 | 5,765.4 | 100% | 100% | 80% | 0% |
-| PPO · ViT † | 0 | 1,165.5 | 60% | 0% | 0% | 0% |
+| PPO · ViT | 0 | 4,346.8 | 100% | 100% | 40% | 0% |
 | AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
-| MuZero · CNN2×2 | 100 | 800.5 | 0% | 0% | 0% | 0% |
 
-所有行均使用 **10 局，环境 seed 为 `1000000…1000009`**。MCTS、AlphaZero 和 MuZero 每步搜索 100 次；A2C/PPO 直接使用策略网络。神经网络行对应随项目发布的 checkpoint 验证成绩，包含挑选 checkpoint 的影响。训练预算不同，这张图用于展示已记录的表现，不构成严格控制变量的排名。
+所有行均使用 **10 局，环境 seed 为 `1000000…1000009`**。MCTS 和 AlphaZero 每步搜索 100 次；A2C/PPO 直接使用策略网络。神经网络行对应随项目发布的 checkpoint 验证成绩，包含挑选 checkpoint 的影响。训练预算不同，这张图用于展示已记录的表现，不构成严格控制变量的排名。
 
-**快照日期：2026-09-22。** A2C/PPO 日志包含 20,000 次迭代；AlphaZero、MuZero 仍在训练，分别截取至第 542、5,402 次迭代。† A2C/CNN2×2 和 PPO/ViT 产生于当前默认训练配置之前，作为历史结果保留，不能将差异仅归因于模型结构。checkpoint 迭代数、逐局成绩和来源信息见 [results.json](assets/results.json)，MCTS 逐局成绩见 [mcts.json](assets/mcts.json)。
+**更新日期：2026-09-23。** A2C/PPO 日志均包含 20,000 次迭代，采用 TD(λ)，n=10、λ=0.5、γ=0.999。本次更新的 A2C/CNN2×2 和 PPO/ViT 权重分别为第 18,400 和 19,975 次迭代的最佳验证 checkpoint。AlphaZero 保留此前截至第 542 次迭代的快照。checkpoint 迭代数、逐局成绩和来源信息见 [results.json](assets/results.json)，MCTS 逐局成绩见 [mcts.json](assets/mcts.json)。
 
 下列图片根据公开的[日志快照](assets/logs)重画。左图展示训练与验证的平均步数；右图展示 **512 至 16384** 的累计达标率，出现更大方块时自动扩展。淡线表示原始数据，实线表示 50 次训练迭代或 5 次验证的滑动均值，星号标记最高验证 spawn 回报。某局达到大块，并不意味着选中的 checkpoint 能稳定达到它。MCTS 没有训练过程，因此在上方概览中展示。
 
@@ -51,10 +49,6 @@
 
 ![AlphaZero · CNN2×2: survival and tile reach rates](assets/alphazero_cnn2x2.png)
 
-### MuZero · CNN2×2
-
-![MuZero · CNN2×2: survival and tile reach rates](assets/muzero_cnn2x2.png)
-
 ## 安装
 
 需要 **Python 3.10+**，在仓库根目录执行：
@@ -72,11 +66,11 @@ python3 -m venv .venv
 
 4×4 棋盘初始生成一个块。每次合法移动后，以 0.9 的概率生成 2，以 0.1 的概率生成 4；达到 2048 后继续游戏，直到无合法动作。策略会屏蔽非法动作。奖励固定采用 **spawn mass**，即每次实际生成的 2 或 4。合并不改变总量，因此终局棋盘总和等于初始总量加累计奖励。
 
-所有神经网络算法默认使用 **TD(λ)，n=10、λ=0.5、γ=0.999**，价值标签混合一步至十步回报。A2C/PPO 使用采集时冻结的 critic 自举，AlphaZero/MuZero 使用保存的搜索价值。训练内部的奖励和价值除以 128，日志使用原始回报；真实终局自举为零。MuZero 还学习原始即时奖励，以及终局之后的零奖励序列。
+所有神经网络算法默认使用 **TD(λ)，n=10、λ=0.5、γ=0.999**，价值标签混合一步至十步回报。A2C/PPO 使用采集时冻结的 critic 自举，AlphaZero 使用保存的搜索价值。训练内部的奖励和价值除以 128，日志使用原始回报；真实终局自举为零。
 
 ## 从零训练
 
-`--iterations` 指定有限的总迭代次数，每个新实验使用独立目录。以下五条命令使用当前默认配置，其中包括 `--td-steps 10 --td-lambda 0.5 --gamma 0.999`。
+`--iterations` 指定有限的总迭代次数，每个新实验使用独立目录。以下四条命令使用当前默认配置，其中包括 `--td-steps 10 --td-lambda 0.5 --gamma 0.999`。
 
 ```sh
 # A2C · CNN2×2
@@ -98,11 +92,6 @@ python3 -m venv .venv
 .venv/bin/python -m algorithms.alphazero \
   --architecture cnn2x2 --seed 0 --iterations 20000 \
   --save-dir checkpoints/alphazero_cnn2x2_td_seed0
-
-# MuZero · CNN2×2
-.venv/bin/python -m algorithms.muzero \
-  --architecture cnn2x2 --seed 0 --iterations 20000 \
-  --save-dir checkpoints/muzero_cnn2x2_td_seed0
 ```
 
 | 算法 | 每次迭代局数 | 参数更新 | 验证／绘图间隔 |
@@ -110,7 +99,6 @@ python3 -m venv .venv
 | A2C | 8 | 一次整批更新 | 25 次迭代 |
 | PPO | 8 | 最多四遍 minibatch；batch 256，KL 阈值 0.02 | 25 次迭代 |
 | AlphaZero | 8 | 100 个 minibatch，每批 256；回放 20,000 个状态 | 10 次迭代 |
-| MuZero | 8 | 100 个 minibatch，每批 64；模型展开 5 步；回放 128 局 | 10 次迭代 |
 
 验证默认使用 10 个固定 seed 的游戏，训练结束时也会验证。搜索算法每步模拟 100 次。可通过 `--eval-every`、`--eval-episodes`、`--plot-every`、`--mcts-sims` 调整相应配置。训练 seed 0 标识实验，逐局 seed 随迭代改变，不会重复同一个游戏。
 
@@ -147,7 +135,6 @@ python3 -m venv .venv
 .venv/bin/python play.py --agent ppo
 .venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_vit.pt
 .venv/bin/python play.py --agent alphazero --budget 100
-.venv/bin/python play.py --agent muzero --budget 100
 ```
 
 按 Enter 执行一步，`H` 获取建议，`W/A/S/D` 手动移动，`P` 自动继续，`Q` 退出。添加 `--auto --delay 0.05` 可观察整局。体验自己训练的模型时，传入 `--checkpoint checkpoints/<run>/best.pt`。
@@ -172,9 +159,6 @@ python3 -m venv .venv
 
 .venv/bin/python evaluate.py --agent alphazero --budget 100 \
   --episodes 10 --seed 2000000 --output experiments/alphazero.json
-
-.venv/bin/python evaluate.py --agent muzero --budget 100 \
-  --episodes 10 --seed 2000000 --output experiments/muzero.json
 ```
 
 输出平均步数、累计生成总量、终局棋盘总和及各级方块的累计达标率，并记录搜索预算。独立评估默认使用 CPU，可指定 `--device auto`；多个 worker 仍使用 CPU。
@@ -183,14 +167,14 @@ python3 -m venv .venv
 
 两个编码器都使用方块指数 embedding，输出 256 维特征。CNN2×2 包含两层无 padding 卷积，空间尺寸 **4×4 → 3×3 → 2×2**，通道 **64 → 128**，使用投影残差、GroupNorm 和 SiLU。ViT 使用 16 个格子 token、宽度 96、两层四头 Transformer、二维轴向 RoPE，并按格子顺序读出。
 
-| 模型 | Actor–critic 参数量 | MuZero 参数量 |
-| --- | ---: | ---: |
-| CNN2×2 | 173,893 | 240,326 |
-| ViT | 187,085 | 253,518 |
+| 模型 | Actor–critic 参数量 |
+| --- | ---: |
+| CNN2×2 | 173,893 |
+| ViT | 187,085 |
 
 | 位置 | 职责 |
 | --- | --- |
-| `algorithms/` | 独立的 MCTS、A2C、PPO、AlphaZero、MuZero 流程 |
+| `algorithms/` | 独立的算法实现 |
 | `common/models.py`、`common/targets.py`、`common/rollout.py` | 编码器、TD 目标和批量采集 |
 | `common/evaluation.py`、`common/parallel.py` | 评估和持久化 CPU worker |
 | `common/training.py`、`common/checkpoints.py` | 配置、续训、checkpoint 和日志 |

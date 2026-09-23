@@ -133,9 +133,15 @@ def plot_results(results, output=None):
                        ha='center', va='center', color='white' if value >= 60 else '#20374c', fontsize=10)
     for spine in right.spines.values():
         spine.set_visible(False)
-    fig.text(.19, .04, 'MCTS / AlphaZero / MuZero: 100 simulations per move. A2C / PPO: direct policy.\n'
-             'Neural results use checkpoint-selection validation games; training budgets differ.\n'
-             '† Recorded before the current training defaults. This is a descriptive snapshot, not a controlled ranking.',
+    search = [f"{r['label'].split(' · ')[0]}: {r['search_budget']} simulations/move"
+              for r in runs if r['search_budget']]
+    direct = list(dict.fromkeys(r['label'].split(' · ')[0] for r in runs if not r['search_budget']))
+    protocol = '; '.join(search + ([f"{' / '.join(direct)}: direct policy"] if direct else [])) + '.'
+    caption = (protocol + '\nNeural results use checkpoint-selection validation games; training budgets differ.\n'
+               'This is a descriptive snapshot, not a controlled ranking.')
+    if any(r.get('historical_configuration') for r in runs):
+        caption += ' † Recorded before the current training defaults.'
+    fig.text(.19, .04, caption,
              fontsize=9, color='#526171', linespacing=1.5)
     temporary = output.with_name(output.stem + '.tmp' + output.suffix)
     fig.savefig(temporary, dpi=160)

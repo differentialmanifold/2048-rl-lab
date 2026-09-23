@@ -14,7 +14,6 @@ A compact research codebase with independent algorithm implementations, recorded
 | [A2C](algorithms/a2c.py) | Fresh episodes, TD(λ) advantages, one actor–critic update | CNN2×2 |
 | [PPO](algorithms/ppo.py) | TD(λ) advantages, clipped updates, shuffled minibatches, KL guard | CNN2×2 / ViT |
 | [AlphaZero](algorithms/alphazero.py) | Search with the game rules, root-visit policy targets, D4 augmentation | CNN2×2 |
-| [MuZero](algorithms/muzero.py) | Learned representation and dynamics, latent search, recurrent training | CNN2×2 |
 
 ## Recorded results
 
@@ -23,15 +22,14 @@ A compact research codebase with independent algorithm implementations, recorded
 | Method / model | Search / move | Mean moves | ≥2048 | ≥4096 | ≥8192 | ≥16384 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | MCTS | 100 | 1,103.6 | 30% | 0% | 0% | 0% |
-| A2C · CNN2×2 † | 0 | 1,311.6 | 60% | 0% | 0% | 0% |
+| A2C · CNN2×2 | 0 | 2,664.5 | 100% | 60% | 10% | 0% |
 | PPO · CNN2×2 | 0 | 5,765.4 | 100% | 100% | 80% | 0% |
-| PPO · ViT † | 0 | 1,165.5 | 60% | 0% | 0% | 0% |
+| PPO · ViT | 0 | 4,346.8 | 100% | 100% | 40% | 0% |
 | AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
-| MuZero · CNN2×2 | 100 | 800.5 | 0% | 0% | 0% | 0% |
 
-All rows use **10 games with environment seeds `1000000…1000009`**. MCTS was evaluated at 100 simulations per move; AlphaZero and MuZero also use 100 simulations. A2C/PPO use the policy directly. The neural rows are the validation results of the bundled checkpoints, so they include checkpoint-selection effects. Training budgets differ; this is a descriptive comparison, not a controlled ranking.
+All rows use **10 games with environment seeds `1000000…1000009`**. MCTS was evaluated at 100 simulations per move; AlphaZero also uses 100 simulations. A2C/PPO use the policy directly. The neural rows are the validation results of the bundled checkpoints, so they include checkpoint-selection effects. Training budgets differ; this is a descriptive comparison, not a controlled ranking.
 
-**Snapshot: 2026-09-22.** A2C/PPO logs contain 20,000 iterations; AlphaZero and MuZero are ongoing-run snapshots through iterations 542 and 5,402. † A2C/CNN2×2 and PPO/ViT were recorded before the current training defaults and are retained as historical results. Their difference cannot be attributed solely to architecture. Checkpoint iterations, per-game outcomes, and provenance are in [results.json](assets/results.json); MCTS outcomes are in [mcts.json](assets/mcts.json).
+**Updated: 2026-09-23.** A2C/PPO logs contain 20,000 iterations with TD(λ), n=10, λ=0.5, γ=0.999. The refreshed A2C/CNN2×2 and PPO/ViT weights are the best validation checkpoints at iterations 18,400 and 19,975. AlphaZero retains its earlier snapshot through iteration 542. Checkpoint iterations, per-game outcomes, and provenance are in [results.json](assets/results.json); MCTS outcomes are in [mcts.json](assets/mcts.json).
 
 The following figures are regenerated from the published [log snapshots](assets/logs). The left panel shows training and validation episode length; the right panel shows inclusive tile-reaching rates from **512 through 16384**, extending automatically for larger tiles. Faint lines are raw observations; solid lines average 50 training iterations or five validation checks. The star marks the highest validation spawn return. Reaching a tile in one game does not imply that the selected checkpoint reaches it reliably. MCTS has no training curve and appears in the overview above.
 
@@ -51,10 +49,6 @@ The following figures are regenerated from the published [log snapshots](assets/
 
 ![AlphaZero · CNN2×2: survival and tile reach rates](assets/alphazero_cnn2x2.png)
 
-### MuZero · CNN2×2
-
-![MuZero · CNN2×2: survival and tile reach rates](assets/muzero_cnn2x2.png)
-
 ## Installation
 
 Requires **Python 3.10+**. Run commands from the repository root.
@@ -72,11 +66,11 @@ Training automatically selects **CUDA → Apple MPS → CPU**, based on availabl
 
 The game starts with one tile on a 4×4 board. Each valid move spawns 2 with probability 0.9 or 4 with probability 0.1; reaching 2048 does not end the game. Illegal actions are masked. The reward is **spawned tile mass**: 2 or 4 per valid move. Merges preserve mass, so final board sum equals initial mass plus cumulative reward.
 
-All neural trainers default to **TD(λ), n=10, λ=0.5, γ=0.999**. Value targets mix one- through ten-step returns. A2C/PPO bootstrap from the frozen collection critic; AlphaZero/MuZero use recorded search values. Rewards and values use units of spawn mass / 128; logs report raw returns. True terminal bootstrap is zero. MuZero separately learns raw immediate rewards and zero-reward terminal tails.
+All neural trainers default to **TD(λ), n=10, λ=0.5, γ=0.999**. Value targets mix one- through ten-step returns. A2C/PPO bootstrap from the frozen collection critic; AlphaZero uses recorded search values. Rewards and values use units of spawn mass / 128; logs report raw returns. True terminal bootstrap is zero.
 
 ## Train from scratch
 
-`--iterations` is a finite total iteration target. Each fresh run needs its own output directory. The five commands below use the current defaults, including `--td-steps 10 --td-lambda 0.5 --gamma 0.999`.
+`--iterations` is a finite total iteration target. Each fresh run needs its own output directory. The four commands below use the current defaults, including `--td-steps 10 --td-lambda 0.5 --gamma 0.999`.
 
 ```sh
 # A2C · CNN2×2
@@ -98,11 +92,6 @@ All neural trainers default to **TD(λ), n=10, λ=0.5, γ=0.999**. Value targets
 .venv/bin/python -m algorithms.alphazero \
   --architecture cnn2x2 --seed 0 --iterations 20000 \
   --save-dir checkpoints/alphazero_cnn2x2_td_seed0
-
-# MuZero · CNN2×2
-.venv/bin/python -m algorithms.muzero \
-  --architecture cnn2x2 --seed 0 --iterations 20000 \
-  --save-dir checkpoints/muzero_cnn2x2_td_seed0
 ```
 
 | Trainer | Games / iteration | Parameter updates | Validation / plot interval |
@@ -110,7 +99,6 @@ All neural trainers default to **TD(λ), n=10, λ=0.5, γ=0.999**. Value targets
 | A2C | 8 | One full-batch step | 25 iterations |
 | PPO | 8 | Up to four minibatch passes; batch 256, KL threshold 0.02 | 25 iterations |
 | AlphaZero | 8 | 100 minibatches of 256; replay 20,000 states | 10 iterations |
-| MuZero | 8 | 100 minibatches of 64; five-step model unroll; replay 128 games | 10 iterations |
 
 Validation uses ten fixed-seed games and also runs at completion. Search trainers use 100 simulations per move. `--eval-every`, `--eval-episodes`, `--plot-every`, and `--mcts-sims` override the relevant defaults. Training seed 0 identifies an experiment; individual game seeds change each iteration.
 
@@ -147,7 +135,6 @@ The bundled CNN2×2 checkpoint is the default for each neural agent. PPO also pr
 .venv/bin/python play.py --agent ppo
 .venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_vit.pt
 .venv/bin/python play.py --agent alphazero --budget 100
-.venv/bin/python play.py --agent muzero --budget 100
 ```
 
 Press Enter for one agent move, `H` for a suggestion, `W/A/S/D` for a manual move, `P` for autoplay, or `Q` to exit. Add `--auto --delay 0.05` to watch a complete game. To inspect your own training run, pass `--checkpoint checkpoints/<run>/best.pt`.
@@ -172,9 +159,6 @@ Use a separate seed range for testing:
 
 .venv/bin/python evaluate.py --agent alphazero --budget 100 \
   --episodes 10 --seed 2000000 --output experiments/alphazero.json
-
-.venv/bin/python evaluate.py --agent muzero --budget 100 \
-  --episodes 10 --seed 2000000 --output experiments/muzero.json
 ```
 
 The output reports mean moves, spawned mass, final board sum, and inclusive tile-reaching rates. Search budget is recorded alongside the result. Standalone evaluation defaults to CPU and accepts `--device auto`; multiple workers use CPU.
@@ -183,14 +167,14 @@ The output reports mean moves, spawned mass, final board sum, and inclusive tile
 
 Both encoders use tile-exponent embeddings and output 256 features. CNN2×2 applies two unpadded convolutions, **4×4 → 3×3 → 2×2**, with **64 → 128** channels, a projected residual, GroupNorm and SiLU. ViT uses 16 cell tokens, width 96, two four-head transformer blocks, axial 2D RoPE, and ordered cell readout.
 
-| Model | Actor–critic parameters | MuZero parameters |
-| --- | ---: | ---: |
-| CNN2×2 | 173,893 | 240,326 |
-| ViT | 187,085 | 253,518 |
+| Model | Actor–critic parameters |
+| --- | ---: |
+| CNN2×2 | 173,893 |
+| ViT | 187,085 |
 
 | Location | Responsibility |
 | --- | --- |
-| `algorithms/` | Independent MCTS, A2C, PPO, AlphaZero, and MuZero flows |
+| `algorithms/` | Independent algorithm implementations |
 | `common/models.py`, `common/targets.py`, `common/rollout.py` | Encoders, TD targets, batched game collection |
 | `common/evaluation.py`, `common/parallel.py` | Evaluation and persistent CPU workers |
 | `common/training.py`, `common/checkpoints.py` | Configuration, resume, checkpoints and logging |
