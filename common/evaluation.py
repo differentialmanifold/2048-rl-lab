@@ -10,6 +10,9 @@ from common.models import REWARD_OBJECTIVE, preprocess_observation, masked_categ
 def evaluate(model, episodes=10, seed=1_000_000, action_fn=None, pool=None):
     if episodes < 1:
         raise ValueError('Evaluation requires at least one episode')
+    if action_fn is None and getattr(model, 'model_config', {}).get('model_type') == 'ppo_afterstate':
+        from algorithms.ppo_afterstate import evaluate_afterstate
+        return evaluate_afterstate(model, episodes, seed, pool)
     if action_fn is None:
         start = time.perf_counter()
         if pool is not None and pool.workers > 1:

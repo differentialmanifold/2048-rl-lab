@@ -19,7 +19,7 @@ def evaluate_game(job):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--agent', choices=['mcts', 'a2c', 'ppo', 'alphazero', 'muzero'], required=True)
+    parser.add_argument('--agent', choices=['mcts', 'a2c', 'ppo', 'ppo_afterstate', 'alphazero', 'muzero', 'latent_imagination', 'latent_afterstate_ppo'], required=True)
     parser.add_argument('--checkpoint')
     parser.add_argument('--episodes', type=int, default=100)
     parser.add_argument('--seed', type=int, default=2_000_000)

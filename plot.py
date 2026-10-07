@@ -50,15 +50,17 @@ def plot_training(logs, output=None, window=50, title=None):
     output.parent.mkdir(parents=True, exist_ok=True)
     vi = np.array([r['iteration'] for r in rows if 'validation' in r])
     validations = [r['validation'] for r in rows if 'validation' in r]
-    steps = np.array([r.get('train_mean_steps', np.nan) for r in rows])
+    imagined = any(r.get('rollout_source') == 'learned_latent_world' for r in rows)
+    steps = np.array([r.get('imagined_mean_steps' if imagined else 'train_mean_steps', np.nan) for r in rows])
     updates = np.array([r['iteration'] for r in rows])
     plt.rcParams.update({'font.size': 10, 'axes.spines.top': False, 'axes.spines.right': False})
     fig, (left, right) = plt.subplots(1, 2, figsize=(13, 4.6), constrained_layout=True)
     fig.suptitle(f'{title or logs.parent.name} · through iteration {updates[-1]:,}',
                  fontsize=17, weight='bold')
-    left.plot(updates, steps, color='#b9c8d7', linewidth=.5, alpha=.5, label='Training batch')
+    left.plot(updates, steps, color='#b9c8d7', linewidth=.5, alpha=.5,
+              label='Imagined games' if imagined else 'Training batch')
     left.plot(updates, moving_average(steps, window), color='#657d92', linewidth=1.3,
-              label=f'Training mean ({window} iterations)')
+              label=f'{"Imagined" if imagined else "Training"} mean ({window} iterations)')
     if validations:
         means = [v['mean_steps'] for v in validations]
         left.plot(vi, means, color='#1869a8', linewidth=.8, alpha=.65, label='Fixed-seed validation')
@@ -77,7 +79,7 @@ def plot_training(logs, output=None, window=50, title=None):
         right.legend(loc='upper left', fontsize=9, ncol=2)
     else:
         right.text(.5, .5, 'Waiting for first validation', ha='center', va='center', transform=right.transAxes)
-    left.set(title='Survival', ylabel='Mean moves per game')
+    left.set(title='Imagined / real survival' if imagined else 'Survival', ylabel='Mean moves per game')
     left.legend(loc='upper left', fontsize=8)
     right.set(title='Tile reach rates · validation (5-check mean)', ylabel='Games (%)', ylim=(-3, 103))
     for ax in (left, right):

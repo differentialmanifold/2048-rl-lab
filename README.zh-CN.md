@@ -13,6 +13,8 @@
 | [MCTS](algorithms/mcts_chance.py) | UCT 选择动作、重新采样随机落子、完整随机模拟 | 无神经网络 |
 | [A2C](algorithms/a2c.py) | 采集新轨迹、计算 TD(λ) 优势、一次 actor–critic 更新 | CNN2×2 |
 | [PPO](algorithms/ppo.py) | TD(λ) 优势、裁剪更新、随机 minibatch、KL 检查 | CNN2×2 / ViT |
+| [PPO Afterstate](docs/ppo-afterstate.zh-CN.md) | 候选 afterstate 共享评分、独立随机落子、PPO 与 TD(λ) | CNN2×2 / ViT |
+| [隐空间想象强化学习](docs/latent-imagination.zh-CN.md) | 构建世界模型、隐空间想象、策略强化学习 | ViT 动态学习率 / CNN2×2 固定学习率 |
 | [AlphaZero](algorithms/alphazero.py) | 使用游戏规则搜索、拟合访问次数策略、D4 对称增强 | CNN2×2 |
 
 ## 已记录的结果
@@ -26,10 +28,11 @@
 | PPO · CNN2×2 | 0 | 5,765.4 | 100% | 100% | 80% | 0% |
 | PPO · ViT | 0 | 4,346.8 | 100% | 100% | 40% | 0% |
 | AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
+| PPO Afterstate · CNN2×2 | 0 | 6,930.7 | 100% | 100% | 90% | 20% |
 
-所有行均使用 **10 局，环境 seed 为 `1000000…1000009`**。MCTS 和 AlphaZero 每步搜索 100 次；A2C/PPO 直接使用策略网络。神经网络行对应随项目发布的 checkpoint 验证成绩，包含挑选 checkpoint 的影响。训练预算不同，这张图用于展示已记录的表现，不构成严格控制变量的排名。
+上表各行均使用 **10 局，环境 seed 为 `1000000…1000009`**。MCTS 和 AlphaZero 每步搜索 100 次；A2C/PPO 直接使用策略网络。神经网络行对应随项目发布的 checkpoint 验证成绩，包含挑选 checkpoint 的影响。训练预算不同，这张图用于展示已记录的表现，不构成严格控制变量的排名。
 
-**更新日期：2026-09-23。** A2C/PPO 日志均包含 20,000 次迭代，采用 TD(λ)，n=10、λ=0.5、γ=0.999。本次更新的 A2C/CNN2×2 和 PPO/ViT 权重分别为第 18,400 和 19,975 次迭代的最佳验证 checkpoint。AlphaZero 保留此前截至第 542 次迭代的快照。checkpoint 迭代数、逐局成绩和来源信息见 [results.json](assets/results.json)，MCTS 逐局成绩见 [mcts.json](assets/mcts.json)。
+**更新日期：2026-10-07。** 原有 A2C/PPO 快照更新于 2026-09-23，日志均包含 20,000 次迭代，采用 TD(λ)，n=10、λ=0.5、γ=0.999。A2C/CNN2×2 和 PPO/ViT 权重分别为第 18,400 和 19,975 次迭代的最佳验证 checkpoint。AlphaZero 保留此前截至第 542 次迭代的快照。checkpoint 迭代数、逐局成绩和来源信息见 [results.json](assets/results.json)，MCTS 逐局成绩见 [mcts.json](assets/mcts.json)。
 
 下列图片根据公开的[日志快照](assets/logs)重画。左图展示训练与验证的平均步数；右图展示 **512 至 16384** 的累计达标率，出现更大方块时自动扩展。淡线表示原始数据，实线表示 50 次训练迭代或 5 次验证的滑动均值，星号标记最高验证 spawn 回报。某局达到大块，并不意味着选中的 checkpoint 能稳定达到它。MCTS 没有训练过程，因此在上方概览中展示。
 
@@ -44,6 +47,18 @@
 ### PPO · ViT
 
 ![PPO · ViT: survival and tile reach rates](assets/ppo_vit.png)
+
+### PPO Afterstate · CNN2×2
+
+![PPO Afterstate · CNN2×2](assets/ppo_afterstate_cnn2x2.png)
+
+2026-10-07：已完成 20,000 轮；最佳验证 checkpoint 为第 16,575 轮，平均 6,930.7 步。已附带对应推理权重，训练与使用方法见 [PPO Afterstate 文档](docs/ppo-afterstate.zh-CN.md)。
+
+### 隐空间想象强化学习 · ViT · 动态学习率
+
+![隐空间想象强化学习 · ViT · 动态学习率](assets/latent_imagination_vit.png)
+
+2026-10-07：训练中，快照至第 9,625 轮／目标 20,000 轮。最佳真实环境验证位于第 9,250 轮，20 局平均 3,666.55 步，≥4096 为 90%，≥8192 为 30%。这里使用 20 局验证；上方结果表使用 10 局。世界模型构建及两种策略命令见[独立文档](docs/latent-imagination.zh-CN.md)，数据见 [latent_imagination_results.json](assets/latent_imagination_results.json)。
 
 ### AlphaZero · CNN2×2
 
@@ -69,6 +84,8 @@ python3 -m venv .venv
 所有神经网络算法默认使用 **TD(λ)，n=10、λ=0.5、γ=0.999**，价值标签混合一步至十步回报。A2C/PPO 使用采集时冻结的 critic 自举，AlphaZero 使用保存的搜索价值。训练内部的奖励和价值除以 128，日志使用原始回报；真实终局自举为零。
 
 ## 从零训练
+
+[PPO Afterstate](docs/ppo-afterstate.zh-CN.md) 支持直接从零训练；[隐空间方案](docs/latent-imagination.zh-CN.md) 通过 `pipeline world` 完整构建世界模型，再用 `pipeline imagine` 训练策略。
 
 `--iterations` 指定有限的总迭代次数，每个新实验使用独立目录。以下四条命令使用当前默认配置，其中包括 `--td-steps 10 --td-lambda 0.5 --gamma 0.999`。
 
@@ -127,12 +144,13 @@ python3 -m venv .venv
 
 ## 体验预训练模型
 
-各神经网络算法默认载入项目附带的 CNN2×2 模型，PPO 另提供 ViT。交互游戏**每次启动使用新的随机性**，只有需要复现时才显式传入 `--seed`。
+附带的 A2C、PPO、PPO Afterstate 和 AlphaZero 默认载入 CNN2×2 模型，PPO 另提供 ViT；隐空间 PPO 使用自己的 checkpoint。交互游戏**每次启动使用新的随机性**，只有需要复现时才显式传入 `--seed`。
 
 ```sh
 .venv/bin/python play.py --agent mcts --budget 100
 .venv/bin/python play.py --agent a2c
 .venv/bin/python play.py --agent ppo
+.venv/bin/python play.py --agent ppo_afterstate
 .venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_vit.pt
 .venv/bin/python play.py --agent alphazero --budget 100
 ```
@@ -175,10 +193,11 @@ python3 -m venv .venv
 | 位置 | 职责 |
 | --- | --- |
 | `algorithms/` | 独立的算法实现 |
+| `algorithms/latent_imagination/` 及其 `world/` | 想象策略学习与世界模型构建 |
 | `common/models.py`、`common/targets.py`、`common/rollout.py` | 编码器、TD 目标和批量采集 |
 | `common/evaluation.py`、`common/parallel.py` | 评估和持久化 CPU worker |
 | `common/training.py`、`common/checkpoints.py` | 配置、续训、checkpoint 和日志 |
-| `board.py`、`gym2048_env.py` | 游戏规则和 Gymnasium 接口 |
+| `board.py`、`gym2048_env.py`、`gym2048_afterstate_env.py` | 游戏规则和 Gymnasium 接口 |
 | `play.py`、`evaluate.py`、`plot.py` | 交互体验、评估和绘图 |
 | `assets/`、`pretrained/` | 公开结果／日志快照和推理权重 |
 | `checkpoints/`、`experiments/` | 本地训练产物，不进入 Git |

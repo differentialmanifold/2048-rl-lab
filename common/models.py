@@ -169,6 +169,23 @@ class ActorCritic(BoardEncoder):
 
 
 def validate_encoder_version(config):
+    if config.get('model_type') == 'latent_afterstate_ppo':
+        if config.get('architecture') not in ('vit', 'cnn2x2') or config.get('policy_version') != 1:
+            raise ValueError('Incompatible latent afterstate PPO policy')
+        world = config.get('world_config', {})
+        if world.get('model_type') != 'latent_dreamer' or world.get('model_version') != 2:
+            raise ValueError('Latent afterstate PPO requires a neural v2 world')
+        validate_encoder_version(world)
+        return
+    if config.get('model_type') == 'latent_dreamer':
+        if config.get('architecture') != 'latent_transformer' or config.get('model_version') != 2:
+            raise ValueError('Incompatible latent_dreamer model version')
+        if config.get('model_version') == 2 and config.get('transition_kind') != 'linear_residual':
+            raise ValueError('Incompatible experimental neural transition; requires linear_residual')
+        if config.get('model_version') == 2 and config.get('transformer_version') != 2:
+            raise ValueError('Incompatible neural world: fixed 2D RoPE/SwiGLU requires a new tokenizer '
+                             'and world training run; old checkpoints cannot be initialized/resumed')
+        return
     if config.get('architecture') not in ARCHITECTURES:
         raise ValueError('Checkpoint requires a supported architecture: cnn2x2 or vit')
     if (config.get('architecture') == 'cnn2x2'
@@ -189,9 +206,18 @@ def model_from_config(config):
     model_type = config.pop('model_type', 'actor_critic')
     if model_type == 'actor_critic':
         return ActorCritic(**config)
+    if model_type == 'ppo_afterstate':
+        from algorithms.ppo_afterstate import AfterstateActorCritic
+        return AfterstateActorCritic(**config)
     if model_type == 'muzero':
         from algorithms.muzero import MuZeroNetwork
         return MuZeroNetwork(**config)
+    if model_type == 'latent_dreamer':
+        from algorithms.latent_imagination.world.model import WorldModel
+        return WorldModel(**config)
+    if model_type == 'latent_afterstate_ppo':
+        from algorithms.latent_imagination.policy import ImaginationAgent
+        return ImaginationAgent(**config)
     raise ValueError(f'Unknown checkpoint model type: {model_type}')
 
 

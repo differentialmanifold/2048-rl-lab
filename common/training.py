@@ -35,10 +35,10 @@ def setup(seed, device='cpu'):
     return resolve_device(device)
 
 
-def training_parser(description):
+def training_parser(description, architectures=ARCHITECTURES):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--iterations', type=int, required=True, help='Total iteration target, including completed iterations on resume')
-    parser.add_argument('--architecture', choices=ARCHITECTURES)
+    parser.add_argument('--architecture', choices=architectures)
     parser.add_argument('--seed', type=int)
     parser.add_argument('--device', help='Training device: auto (new-run default, CUDA > MPS > CPU), cpu, cuda, cuda:N, or mps; resume inherits the saved choice')
     parser.add_argument('--workers', type=int, help='Override automatic CPU/game-based worker count; 1 uses in-process batching')
@@ -104,14 +104,16 @@ def resolve_args(parser, algorithm, defaults, argv=None):
 
 
 class TrainingRun:
-    def __init__(self, args, algorithm, model_factory=None, *, reward_objective=REWARD_OBJECTIVE):
+    def __init__(self, args, algorithm, model_factory=None, *, reward_objective=REWARD_OBJECTIVE,
+                 optimizer_factory=None):
         self.args, self.algorithm = args, algorithm
         self.reward_objective = reward_objective
         self.device = setup(args.seed, args.device)
         factory = model_factory or (lambda: ActorCritic(architecture=args.architecture))
         self.model = factory().to(self.device)
         self.parameter_count = sum(p.numel() for p in self.model.parameters())
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=args.lr)
+        self.optimizer = (optimizer_factory(self.model) if optimizer_factory is not None
+                          else torch.optim.Adam(self.model.parameters(), lr=args.lr))
         self.saved = read_checkpoint(args.resume) if args.resume else None
         if self.saved and self.saved['reward_objective'] != self.reward_objective:
             raise ValueError(f'Resume reward objective must be {self.reward_objective}; '
@@ -189,4 +191,4 @@ class TrainingRun:
         print(json.dumps(metrics), flush=True)
         if iteration % self.args.plot_every == 0 or final:
             from plot import plot_training
-            plot_training(self.logs, title=f'{self.algorithm.upper()} · {self.args.architecture.upper()}')
+            plot_training(self.logs, title=f'{getattr(self.model, "display_name", self.algorithm.upper())} · {self.args.architecture.upper()}')

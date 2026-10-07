@@ -32,7 +32,7 @@ def make_agent(agent, checkpoint=None, budget=500, seed=None, device='cpu'):
                 dict(search_budget=budget, transition_model='resampled_chance'))
     path = Path(checkpoint) if checkpoint else ROOT / 'pretrained' / f'{agent}_cnn2x2.pt'
     data = read_checkpoint(path)
-    if data['algorithm'] != agent:
+    if data['algorithm'] != ('latent_afterstate_ppo' if agent == 'latent_imagination' else agent):
         raise ValueError(f'{path} contains {data["algorithm"]}, not {agent}')
     model = model_from_checkpoint(data, device).eval()
     metadata = dict(algorithm=agent, model_config=model.model_config,
@@ -52,12 +52,19 @@ def make_agent(agent, checkpoint=None, budget=500, seed=None, device='cpu'):
         action = search_controller(model, budget, data['config'].get('gamma', 1.),
                                    data['config'].get('search_depth', 10), seed)
         metadata.update(search_budget=budget, search_depth=data['config'].get('search_depth', 10))
+    elif agent == 'ppo_afterstate':
+        from algorithms.ppo_afterstate import afterstate_action
+        action = lambda state, info: afterstate_action(model, state, info)
+        metadata.update(transition_model='exact_move_then_spawn', reward_objective='spawn_mass')
     else:
         @torch.no_grad()
         def action(state, info):
             logits, _ = model(preprocess_observation(state).to(device))
             return int(masked_categorical(logits, info['can_move_dir']).probs.argmax())
-    label = f'{agent.upper()} · {model.architecture.upper()} · iteration {data["iteration"]}'
+        if agent in ('latent_imagination', 'latent_afterstate_ppo'):
+            metadata.update(transition_model='frozen_neural_afterstate', reward_objective='spawn_mass',
+                            phase='imagine_ppo', world_sha256=data.get('verified_world_sha256'))
+    label = f'{getattr(model, "display_name", agent.upper())} · {model.architecture.upper()} · iteration {data["iteration"]}'
     return action, label, metadata
 
 
@@ -91,7 +98,7 @@ def play(agent=None, seed=None, label='Human', auto=False, delay=.1, max_steps=N
                 if command == 'q':
                     break
                 if command in ('', 'h', 'p') and agent is None:
-                    message = 'Choose --agent a2c, ppo, alphazero, muzero, mcts to use an agent.'
+                    message = 'Choose --agent a2c, ppo, ppo_afterstate, alphazero, muzero, latent_imagination, mcts to use an agent.'
                     continue
                 if command == 'p':
                     auto = True
@@ -123,7 +130,7 @@ def play(agent=None, seed=None, label='Human', auto=False, delay=.1, max_steps=N
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--agent', choices=['human', 'mcts', 'a2c', 'ppo', 'alphazero', 'muzero'], default='human')
+    parser.add_argument('--agent', choices=['human', 'mcts', 'a2c', 'ppo', 'ppo_afterstate', 'alphazero', 'muzero', 'latent_imagination', 'latent_afterstate_ppo'], default='human')
     parser.add_argument('--checkpoint', help='Full checkpoint or bundled pretrained/*.pt export')
     parser.add_argument('--budget', type=int, default=500)
     parser.add_argument('--seed', type=int, help='Optional reproducible session; defaults to fresh OS randomness')

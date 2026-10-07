@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-09-23",
+  "recorded_at": "2026-10-07",
   "evaluation_seeds": [
     1000000,
     1000001,
@@ -141,7 +141,7 @@
     },
     {
       "id": "a2c_cnn2x2",
-      "label": "A2C · CNN2×2",
+      "label": "A2C \u00b7 CNN2\u00d72",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -279,7 +279,7 @@
     },
     {
       "id": "ppo_cnn2x2",
-      "label": "PPO · CNN2×2",
+      "label": "PPO \u00b7 CNN2\u00d72",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -416,7 +416,7 @@
     },
     {
       "id": "ppo_vit",
-      "label": "PPO · ViT",
+      "label": "PPO \u00b7 ViT",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -554,7 +554,7 @@
     },
     {
       "id": "alphazero_cnn2x2",
-      "label": "AlphaZero · CNN2×2",
+      "label": "AlphaZero \u00b7 CNN2\u00d72",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -688,6 +688,145 @@
       "source_log_sha256": "1ea8313c08588745856ea71896777ea7146da9f9c1c8880fd1d046bbbd90b06a",
       "snapshot_log_sha256": "717a86e5e4135d86fcd987e6ec17bd52b56c07861b0e969ea4658307845f022d",
       "recorded_at": "2026-09-22"
+    },
+    {
+      "id": "ppo_afterstate_cnn2x2",
+      "label": "PPO Afterstate \u00b7 CNN2\u00d72",
+      "model": {
+        "obs_dim": 16,
+        "num_actions": 4,
+        "architecture": "cnn2x2",
+        "encoder_version": 3,
+        "model_type": "ppo_afterstate",
+        "afterstate_version": 1
+      },
+      "search_budget": 0,
+      "through_iteration": 20000,
+      "checkpoint_iteration": 16575,
+      "checkpoint": "pretrained/ppo_afterstate_cnn2x2.pt",
+      "log": "assets/logs/ppo_afterstate_cnn2x2.jsonl",
+      "training_seed": 0,
+      "recorded_settings": {
+        "gamma": 0.999,
+        "td_steps": 10,
+        "td_lambda": 0.5
+      },
+      "metrics": {
+        "episodes": 10,
+        "seed": 1000000,
+        "score_metric": "spawn_mass",
+        "mean_score": 15270.4,
+        "mean_return": 15270.4,
+        "mean_spawn_return": 15270.4,
+        "mean_board_sum": 15272.6,
+        "mean_merge_score": 170700.8,
+        "mean_steps": 6930.7,
+        "max_tile": 16384,
+        "p512": 1.0,
+        "p1024": 1.0,
+        "p2048": 1.0,
+        "p4096": 1.0,
+        "p8192": 0.9,
+        "p16384": 0.2,
+        "seconds": 3.6338724580127746,
+        "ms_per_move": 0.052431535891219856,
+        "results": [
+          {
+            "seed": 1000000,
+            "steps": 6958,
+            "spawn_return": 15362.0,
+            "board_sum": 15364,
+            "max_tile": 8192,
+            "merge_score": 168112.0,
+            "legacy_score": 30.728
+          },
+          {
+            "seed": 1000001,
+            "steps": 3643,
+            "spawn_return": 8106.0,
+            "board_sum": 8108,
+            "max_tile": 4096,
+            "merge_score": 79632.0,
+            "legacy_score": 16.216
+          },
+          {
+            "seed": 1000002,
+            "steps": 7594,
+            "spawn_return": 16672.0,
+            "board_sum": 16674,
+            "max_tile": 8192,
+            "merge_score": 179184.0,
+            "legacy_score": 33.348
+          },
+          {
+            "seed": 1000003,
+            "steps": 6351,
+            "spawn_return": 14036.0,
+            "board_sum": 14038,
+            "max_tile": 8192,
+            "merge_score": 154996.0,
+            "legacy_score": 28.076
+          },
+          {
+            "seed": 1000004,
+            "steps": 10210,
+            "spawn_return": 22548.0,
+            "board_sum": 22550,
+            "max_tile": 16384,
+            "merge_score": 270232.0,
+            "legacy_score": 45.1
+          },
+          {
+            "seed": 1000005,
+            "steps": 7203,
+            "spawn_return": 15740.0,
+            "board_sum": 15744,
+            "max_tile": 8192,
+            "merge_score": 172380.0,
+            "legacy_score": 31.488
+          },
+          {
+            "seed": 1000006,
+            "steps": 11083,
+            "spawn_return": 24382.0,
+            "board_sum": 24384,
+            "max_tile": 16384,
+            "merge_score": 289000.0,
+            "legacy_score": 48.768
+          },
+          {
+            "seed": 1000007,
+            "steps": 5535,
+            "spawn_return": 12204.0,
+            "board_sum": 12206,
+            "max_tile": 8192,
+            "merge_score": 132284.0,
+            "legacy_score": 24.412
+          },
+          {
+            "seed": 1000008,
+            "steps": 4648,
+            "spawn_return": 10300.0,
+            "board_sum": 10302,
+            "max_tile": 8192,
+            "merge_score": 112896.0,
+            "legacy_score": 20.604
+          },
+          {
+            "seed": 1000009,
+            "steps": 6082,
+            "spawn_return": 13354.0,
+            "board_sum": 13356,
+            "max_tile": 8192,
+            "merge_score": 148292.0,
+            "legacy_score": 26.712
+          }
+        ]
+      },
+      "snapshot_log_sha256": "ff77e6801042dc12ece6c0596c81eda4f3174bc2a408e296c8eab72275ce246a",
+      "recorded_at": "2026-10-07",
+      "source_checkpoint": "checkpoints/ppo_afterstate_cnn2x2_td_seed0_klfix/best.pt",
+      "source_log_sha256": "c5b6a99ffa4eb5e21736c83d383b2c0d7156e11485180e27d4a1b3eb02607a4c"
     }
   ]
 }

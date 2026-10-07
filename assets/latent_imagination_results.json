@@ -1,0 +1,436 @@
+{
+  "recorded_at": "2026-10-07",
+  "protocol": "In-progress checkpoint-selection validation in the real 2048 environment; 20 fixed-seed games. Training uses a frozen learned latent world.",
+  "runs": [
+    {
+      "id": "latent_imagination_vit",
+      "label": "Latent Imagination RL \u00b7 vit",
+      "status": "training",
+      "target_iterations": 20000,
+      "through_iteration": 9625,
+      "checkpoint_iteration": 9250,
+      "lr_schedule": "adaptive_kl",
+      "log": "assets/logs/latent_imagination_vit.jsonl",
+      "snapshot_log_sha256": "903ee0eded4e1e77229c1979403d658a39ccfacabd7c1993a21f600ecdf75cb7",
+      "metrics": {
+        "episodes": 20,
+        "seed": 1000000,
+        "score_metric": "spawn_mass",
+        "mean_score": 8074.0,
+        "mean_return": 8074.0,
+        "mean_spawn_return": 8074.0,
+        "mean_board_sum": 8076.2,
+        "mean_merge_score": 82529.6,
+        "mean_steps": 3666.55,
+        "max_tile": 8192,
+        "p512": 1.0,
+        "p1024": 0.95,
+        "p2048": 0.95,
+        "p4096": 0.9,
+        "p8192": 0.3,
+        "p16384": 0.0,
+        "seconds": 13.735591917065904,
+        "ms_per_move": 0.18730948598908925,
+        "results": [
+          {
+            "seed": 1000000,
+            "steps": 3776,
+            "spawn_return": 8332.0,
+            "board_sum": 8334,
+            "max_tile": 4096,
+            "merge_score": 81156.0,
+            "legacy_score": 16.668
+          },
+          {
+            "seed": 1000001,
+            "steps": 2726,
+            "spawn_return": 6048.0,
+            "board_sum": 6050,
+            "max_tile": 4096,
+            "merge_score": 59584.0,
+            "legacy_score": 12.1
+          },
+          {
+            "seed": 1000002,
+            "steps": 3701,
+            "spawn_return": 8110.0,
+            "board_sum": 8112,
+            "max_tile": 4096,
+            "merge_score": 79952.0,
+            "legacy_score": 16.224
+          },
+          {
+            "seed": 1000003,
+            "steps": 3719,
+            "spawn_return": 8230.0,
+            "board_sum": 8232,
+            "max_tile": 4096,
+            "merge_score": 80476.0,
+            "legacy_score": 16.464
+          },
+          {
+            "seed": 1000004,
+            "steps": 4545,
+            "spawn_return": 9988.0,
+            "board_sum": 9990,
+            "max_tile": 8192,
+            "merge_score": 110576.0,
+            "legacy_score": 19.98
+          },
+          {
+            "seed": 1000005,
+            "steps": 3738,
+            "spawn_return": 8226.0,
+            "board_sum": 8230,
+            "max_tile": 4096,
+            "merge_score": 80552.0,
+            "legacy_score": 16.46
+          },
+          {
+            "seed": 1000006,
+            "steps": 5429,
+            "spawn_return": 11954.0,
+            "board_sum": 11956,
+            "max_tile": 8192,
+            "merge_score": 128872.0,
+            "legacy_score": 23.912
+          },
+          {
+            "seed": 1000007,
+            "steps": 3673,
+            "spawn_return": 8076.0,
+            "board_sum": 8078,
+            "max_tile": 4096,
+            "merge_score": 79460.0,
+            "legacy_score": 16.156
+          },
+          {
+            "seed": 1000008,
+            "steps": 3707,
+            "spawn_return": 8250.0,
+            "board_sum": 8252,
+            "max_tile": 4096,
+            "merge_score": 80540.0,
+            "legacy_score": 16.504
+          },
+          {
+            "seed": 1000009,
+            "steps": 3803,
+            "spawn_return": 8328.0,
+            "board_sum": 8330,
+            "max_tile": 4096,
+            "merge_score": 81264.0,
+            "legacy_score": 16.66
+          },
+          {
+            "seed": 1000010,
+            "steps": 3292,
+            "spawn_return": 7206.0,
+            "board_sum": 7208,
+            "max_tile": 4096,
+            "merge_score": 71596.0,
+            "legacy_score": 14.416
+          },
+          {
+            "seed": 1000011,
+            "steps": 651,
+            "spawn_return": 1452.0,
+            "board_sum": 1454,
+            "max_tile": 512,
+            "merge_score": 10060.0,
+            "legacy_score": 2.908
+          },
+          {
+            "seed": 1000012,
+            "steps": 4716,
+            "spawn_return": 10420.0,
+            "board_sum": 10422,
+            "max_tile": 8192,
+            "merge_score": 113728.0,
+            "legacy_score": 20.844
+          },
+          {
+            "seed": 1000013,
+            "steps": 3591,
+            "spawn_return": 7956.0,
+            "board_sum": 7958,
+            "max_tile": 4096,
+            "merge_score": 78620.0,
+            "legacy_score": 15.916
+          },
+          {
+            "seed": 1000014,
+            "steps": 4202,
+            "spawn_return": 9224.0,
+            "board_sum": 9228,
+            "max_tile": 8192,
+            "merge_score": 103712.0,
+            "legacy_score": 18.456
+          },
+          {
+            "seed": 1000015,
+            "steps": 2846,
+            "spawn_return": 6260.0,
+            "board_sum": 6262,
+            "max_tile": 4096,
+            "merge_score": 61232.0,
+            "legacy_score": 12.524
+          },
+          {
+            "seed": 1000016,
+            "steps": 1919,
+            "spawn_return": 4186.0,
+            "board_sum": 4188,
+            "max_tile": 2048,
+            "merge_score": 36680.0,
+            "legacy_score": 8.376
+          },
+          {
+            "seed": 1000017,
+            "steps": 4321,
+            "spawn_return": 9500.0,
+            "board_sum": 9502,
+            "max_tile": 8192,
+            "merge_score": 105620.0,
+            "legacy_score": 19.004
+          },
+          {
+            "seed": 1000018,
+            "steps": 5430,
+            "spawn_return": 11944.0,
+            "board_sum": 11946,
+            "max_tile": 8192,
+            "merge_score": 129820.0,
+            "legacy_score": 23.892
+          },
+          {
+            "seed": 1000019,
+            "steps": 3546,
+            "spawn_return": 7790.0,
+            "board_sum": 7792,
+            "max_tile": 4096,
+            "merge_score": 77092.0,
+            "legacy_score": 15.584
+          }
+        ]
+      },
+      "world_run": "checkpoints/latent2048_policy_repair_seed0",
+      "source_log_sha256": "a41b8606ffb4647860da120ffc55f0dc2f9e9e2d5abb5ae111c53335330bdb98"
+    },
+    {
+      "id": "latent_imagination_cnn2x2",
+      "label": "Latent Imagination RL \u00b7 cnn2x2",
+      "status": "training",
+      "target_iterations": 20000,
+      "through_iteration": 11275,
+      "checkpoint_iteration": 10825,
+      "lr_schedule": "constant",
+      "log": "assets/logs/latent_imagination_cnn2x2.jsonl",
+      "snapshot_log_sha256": "a28b1196d1ea9faa8b408ba78d2cbc8386d346978b791049ffcadf340b5aa4d1",
+      "metrics": {
+        "episodes": 20,
+        "seed": 1000000,
+        "score_metric": "spawn_mass",
+        "mean_score": 8612.0,
+        "mean_return": 8612.0,
+        "mean_spawn_return": 8612.0,
+        "mean_board_sum": 8614.2,
+        "mean_merge_score": 89407.6,
+        "mean_steps": 3912.35,
+        "max_tile": 8192,
+        "p512": 0.95,
+        "p1024": 0.95,
+        "p2048": 0.95,
+        "p4096": 0.9,
+        "p8192": 0.35,
+        "p16384": 0.0,
+        "seconds": 10.797172624850646,
+        "ms_per_move": 0.13798832702660352,
+        "results": [
+          {
+            "seed": 1000000,
+            "steps": 4885,
+            "spawn_return": 10752.0,
+            "board_sum": 10754,
+            "max_tile": 8192,
+            "merge_score": 119776.0,
+            "legacy_score": 21.508
+          },
+          {
+            "seed": 1000001,
+            "steps": 3088,
+            "spawn_return": 6854.0,
+            "board_sum": 6856,
+            "max_tile": 4096,
+            "merge_score": 68512.0,
+            "legacy_score": 13.712
+          },
+          {
+            "seed": 1000002,
+            "steps": 3755,
+            "spawn_return": 8272.0,
+            "board_sum": 8274,
+            "max_tile": 4096,
+            "merge_score": 80756.0,
+            "legacy_score": 16.548
+          },
+          {
+            "seed": 1000003,
+            "steps": 3844,
+            "spawn_return": 8506.0,
+            "board_sum": 8508,
+            "max_tile": 4096,
+            "merge_score": 82372.0,
+            "legacy_score": 17.016
+          },
+          {
+            "seed": 1000004,
+            "steps": 3363,
+            "spawn_return": 7470.0,
+            "board_sum": 7472,
+            "max_tile": 4096,
+            "merge_score": 74668.0,
+            "legacy_score": 14.944
+          },
+          {
+            "seed": 1000005,
+            "steps": 3578,
+            "spawn_return": 7828.0,
+            "board_sum": 7832,
+            "max_tile": 4096,
+            "merge_score": 77304.0,
+            "legacy_score": 15.664
+          },
+          {
+            "seed": 1000006,
+            "steps": 1770,
+            "spawn_return": 3890.0,
+            "board_sum": 3892,
+            "max_tile": 2048,
+            "merge_score": 34532.0,
+            "legacy_score": 7.784
+          },
+          {
+            "seed": 1000007,
+            "steps": 4300,
+            "spawn_return": 9520.0,
+            "board_sum": 9522,
+            "max_tile": 8192,
+            "merge_score": 105560.0,
+            "legacy_score": 19.044
+          },
+          {
+            "seed": 1000008,
+            "steps": 3410,
+            "spawn_return": 7574.0,
+            "board_sum": 7576,
+            "max_tile": 4096,
+            "merge_score": 75560.0,
+            "legacy_score": 15.152
+          },
+          {
+            "seed": 1000009,
+            "steps": 3658,
+            "spawn_return": 8014.0,
+            "board_sum": 8016,
+            "max_tile": 4096,
+            "merge_score": 79416.0,
+            "legacy_score": 16.032
+          },
+          {
+            "seed": 1000010,
+            "steps": 2860,
+            "spawn_return": 6276.0,
+            "board_sum": 6278,
+            "max_tile": 4096,
+            "merge_score": 61072.0,
+            "legacy_score": 12.556
+          },
+          {
+            "seed": 1000011,
+            "steps": 294,
+            "spawn_return": 660.0,
+            "board_sum": 662,
+            "max_tile": 256,
+            "merge_score": 3544.0,
+            "legacy_score": 1.324
+          },
+          {
+            "seed": 1000012,
+            "steps": 3724,
+            "spawn_return": 8192.0,
+            "board_sum": 8194,
+            "max_tile": 4096,
+            "merge_score": 80412.0,
+            "legacy_score": 16.388
+          },
+          {
+            "seed": 1000013,
+            "steps": 6450,
+            "spawn_return": 14220.0,
+            "board_sum": 14222,
+            "max_tile": 8192,
+            "merge_score": 156296.0,
+            "legacy_score": 28.444
+          },
+          {
+            "seed": 1000014,
+            "steps": 3614,
+            "spawn_return": 7982.0,
+            "board_sum": 7986,
+            "max_tile": 4096,
+            "merge_score": 78272.0,
+            "legacy_score": 15.972
+          },
+          {
+            "seed": 1000015,
+            "steps": 4541,
+            "spawn_return": 9974.0,
+            "board_sum": 9976,
+            "max_tile": 8192,
+            "merge_score": 110452.0,
+            "legacy_score": 19.952
+          },
+          {
+            "seed": 1000016,
+            "steps": 3990,
+            "spawn_return": 8788.0,
+            "board_sum": 8790,
+            "max_tile": 4096,
+            "merge_score": 91928.0,
+            "legacy_score": 17.58
+          },
+          {
+            "seed": 1000017,
+            "steps": 5644,
+            "spawn_return": 12346.0,
+            "board_sum": 12348,
+            "max_tile": 8192,
+            "merge_score": 133464.0,
+            "legacy_score": 24.696
+          },
+          {
+            "seed": 1000018,
+            "steps": 6588,
+            "spawn_return": 14362.0,
+            "board_sum": 14364,
+            "max_tile": 8192,
+            "merge_score": 157444.0,
+            "legacy_score": 28.728
+          },
+          {
+            "seed": 1000019,
+            "steps": 4891,
+            "spawn_return": 10760.0,
+            "board_sum": 10762,
+            "max_tile": 8192,
+            "merge_score": 116812.0,
+            "legacy_score": 21.524
+          }
+        ]
+      },
+      "world_run": "checkpoints/latent2048_policy_repair_seed0",
+      "source_log_sha256": "8ef3d05441b591ac647180707de4977fcc7fe90ac06465384856289fcc97b2cf"
+    }
+  ]
+}
