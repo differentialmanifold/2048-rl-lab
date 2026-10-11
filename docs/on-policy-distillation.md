@@ -46,3 +46,7 @@ The PPO-teacher run completed 20,000 iterations. Its best validation checkpoint 
 The bundled weights are inference-only. Records are in [results.json](../assets/results.json).
 
 ![On-policy distillation · CNN2×2 · PPO teacher](../assets/opd_ppo_cnn2x2.png)
+
+The AlphaZero-teacher run is in progress: the 2026-10-11 snapshot reaches iteration 3,825 of 20,000. Its best validation at iteration 3,725 averages 1,406.8 moves over 10 games, reaching 2048 in 80%. Validation also uses the direct student policy without search.
+
+![On-policy distillation · CNN2×2 · AlphaZero teacher](../assets/opd_alphazero_cnn2x2.png)

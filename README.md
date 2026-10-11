@@ -13,7 +13,7 @@ A compact research codebase with independent algorithm implementations, recorded
 | [MCTS](algorithms/mcts_chance.py) | UCT action selection, resampled tile spawns, full random rollouts | No neural network |
 | [A2C](algorithms/a2c.py) | Fresh episodes, TD(λ) advantages, one actor–critic update | CNN2×2 |
 | [PPO](algorithms/ppo.py) | TD(λ) advantages, clipped updates, shuffled minibatches, KL guard | CNN2×2 / ViT; optional [D4 augmentation](docs/ppo-symmetry.md) |
-| [On-policy distillation](docs/on-policy-distillation.md) | Student rollouts, frozen PPO or current-student AlphaZero search teacher, reverse KL | CNN2×2 · PPO teacher |
+| [On-policy distillation](docs/on-policy-distillation.md) | Student rollouts, frozen PPO or current-student AlphaZero search teacher, reverse KL | CNN2×2 · PPO / AlphaZero teachers |
 | [PPO Afterstate](docs/ppo-afterstate.md) | Shared candidate-afterstate scoring, separate tile spawn, PPO with TD(λ) | CNN2×2 / ViT |
 | [Latent Imagination RL](docs/latent-imagination.md) | Learn a world model, imagine latent games, reinforce the policy | ViT adaptive LR / CNN2×2 constant LR |
 | [AlphaZero](algorithms/alphazero.py) | Search with the game rules, root-visit policy targets, D4 augmentation | CNN2×2 |
@@ -22,18 +22,19 @@ A compact research codebase with independent algorithm implementations, recorded
 
 ![Survival and tile reach rates across algorithms](assets/overview.png)
 
-| Method / model | Search / move | Mean moves | ≥2048 | ≥4096 | ≥8192 | ≥16384 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| MCTS | 100 | 1,103.6 | 30% | 0% | 0% | 0% |
-| A2C · CNN2×2 | 0 | 2,664.5 | 100% | 60% | 10% | 0% |
-| PPO · CNN2×2 | 0 | 5,765.4 | 100% | 100% | 80% | 0% |
-| PPO · ViT | 0 | 4,346.8 | 100% | 100% | 40% | 0% |
-| AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
-| PPO Afterstate · CNN2×2 | 0 | 6,930.7 | 100% | 100% | 90% | 20% |
-| PPO · CNN2×2 · D4 | 0 | 3,049.1 | 100% | 80% | 10% | 0% |
-| OPD (PPO teacher) · CNN2×2 | 0 | 5,033.8 | 100% | 90% | 80% | 0% |
+| Method / model | Search / move | Games | Mean moves | ≥2048 | ≥4096 | ≥8192 | ≥16384 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| MCTS | 100 | 10 | 1,103.6 | 30% | 0% | 0% | 0% |
+| A2C · CNN2×2 | 0 | 10 | 2,664.5 | 100% | 60% | 10% | 0% |
+| PPO · CNN2×2 | 0 | 10 | 5,765.4 | 100% | 100% | 80% | 0% |
+| PPO · ViT | 0 | 10 | 4,346.8 | 100% | 100% | 40% | 0% |
+| AlphaZero · CNN2×2 | 100 | 10 | 3,576.4 | 90% | 90% | 30% | 0% |
+| PPO Afterstate · CNN2×2 | 0 | 10 | 6,930.7 | 100% | 100% | 90% | 20% |
+| PPO · CNN2×2 · D4 | 0 | 10 | 3,049.1 | 100% | 80% | 10% | 0% |
+| OPD (PPO teacher) · CNN2×2 | 0 | 10 | 5,033.8 | 100% | 90% | 80% | 0% |
+| Latent Imagination RL · ViT | 0 | 20 | 5,731.3 | 100% | 95% | 80% | 0% |
 
-All rows use **10 games with environment seeds `1000000…1000009`**. MCTS was evaluated at 100 simulations per move; AlphaZero also uses 100 simulations. A2C/PPO use the policy directly. The neural rows are the validation results of the bundled checkpoints, so they include checkpoint-selection effects. Training budgets differ; this is a descriptive comparison, not a controlled ranking.
+Latent Imagination RL uses **20 games with seeds `1000000…1000019`**; the other rows use **10 games with seeds `1000000…1000009`**. MCTS was evaluated at 100 simulations per move; AlphaZero also uses 100 simulations. A2C/PPO use the policy directly. The neural rows are the validation results of checkpoints selected during training, so they include checkpoint-selection effects. Training budgets differ; this is a descriptive comparison, not a controlled ranking.
 
 **Updated: 2026-10-11.** PPO D4 and PPO-teacher distillation have completed 20,000 iterations. The original A2C/PPO snapshots were refreshed on 2026-09-23; their logs contain 20,000 iterations with TD(λ), n=10, λ=0.5, γ=0.999. The A2C/CNN2×2 and PPO/ViT weights are the best validation checkpoints at iterations 18,400 and 19,975. AlphaZero retains its earlier snapshot through iteration 542. Checkpoint iterations, per-game outcomes, and provenance are in [results.json](assets/results.json); MCTS outcomes are in [mcts.json](assets/mcts.json).
 
@@ -63,6 +64,12 @@ Completed 20,000 iterations. The best validation checkpoint at iteration 18,900 
 
 Completed 20,000 iterations. The best validation checkpoint at iteration 15,625 averages 5,033.8 moves over 10 games, reaching 8192 in 80%. The student collects its own games and learns from the frozen PPO teacher; inference uses the student directly. Its weights are bundled; see the [guide](docs/on-policy-distillation.md).
 
+### On-policy distillation · CNN2×2 · AlphaZero teacher
+
+![On-policy distillation · CNN2×2 · AlphaZero teacher](assets/opd_alphazero_cnn2x2.png)
+
+2026-10-11: training in progress, snapshot through iteration 3,825 of 20,000. The best validation at iteration 3,725 averages 1,406.8 moves over 10 games, reaching 2048 in 80%. The teacher searches with the current student; validation uses the student's direct policy without search.
+
 ### PPO Afterstate · CNN2×2
 
 ![PPO Afterstate · CNN2×2](assets/ppo_afterstate_cnn2x2.png)
@@ -73,7 +80,7 @@ Completed 20,000 iterations. The best validation checkpoint at iteration 15,625 
 
 ![Latent Imagination RL · ViT · adaptive KL](assets/latent_imagination_vit.png)
 
-2026-10-11: completed 20,000 iterations. The best real-game validation at iteration 18,925 averages 5,731.3 moves over 20 games, reaching 4096 in 95% and 8192 in 80%. This uses 20 validation games; the overview table uses 10. World construction and both policy commands are in the [guide](docs/latent-imagination.md); records are in [latent_imagination_results.json](assets/latent_imagination_results.json).
+2026-10-11: completed 20,000 iterations. The best real-game validation at iteration 18,925 averages 5,731.3 moves over 20 games, reaching 4096 in 95% and 8192 in 80%. World construction and both policy commands are in the [guide](docs/latent-imagination.md); records are in [latent_imagination_results.json](assets/latent_imagination_results.json).
 
 ### AlphaZero · CNN2×2
 

@@ -46,3 +46,7 @@ PPO 教师训练已完成 20,000 轮。最佳验证 checkpoint 为第 15,625 轮
 附带权重仅供推理，数据见 [results.json](../assets/results.json)。
 
 ![On-policy distillation · CNN2×2 · PPO 教师](../assets/opd_ppo_cnn2x2.png)
+
+AlphaZero 教师版本仍在训练，2026-10-11 快照至第 3,825 轮／目标 20,000 轮；最佳验证位于第 3,725 轮，10 局平均 1,406.8 步，≥2048 为 80%。验证同样不进行搜索。
+
+![On-policy distillation · CNN2×2 · AlphaZero 教师](../assets/opd_alphazero_cnn2x2.png)

@@ -12,7 +12,7 @@
     1000008,
     1000009
   ],
-  "protocol": "Recorded checkpoint-selection validation; MCTS independently evaluated on the same seed range. Training budgets and recorded configurations differ.",
+  "protocol": "Recorded checkpoint-selection validation; MCTS independently evaluated on the same seed range. Default: 10 games; per-run evaluation_seeds overrides the default. Training budgets and recorded configurations differ.",
   "runs": [
     {
       "id": "mcts",
@@ -1108,6 +1108,403 @@
       },
       "teacher_checkpoint": "pretrained/ppo_cnn2x2.pt",
       "teacher_checkpoint_sha256": "3a9d39d372c3d74c3cc1caf2dfb9734d1101fa49f7b65c0b8f211779ff293fb7"
+    },
+    {
+      "id": "latent_imagination_vit",
+      "label": "Latent Imagination RL · ViT",
+      "status": "complete",
+      "target_iterations": 20000,
+      "through_iteration": 20000,
+      "checkpoint_iteration": 18925,
+      "lr_schedule": "adaptive_kl",
+      "log": "assets/logs/latent_imagination_vit.jsonl",
+      "snapshot_log_sha256": "e8e27b9ff4ad9968b5e8c393086b6b25ac52326794e2de0db1f0d9486ca8d41a",
+      "metrics": {
+        "episodes": 20,
+        "seed": 1000000,
+        "score_metric": "spawn_mass",
+        "mean_score": 12614.8,
+        "mean_return": 12614.8,
+        "mean_spawn_return": 12614.8,
+        "mean_board_sum": 12617.0,
+        "mean_merge_score": 136249.2,
+        "mean_steps": 5731.3,
+        "max_tile": 8192,
+        "p512": 1.0,
+        "p1024": 1.0,
+        "p2048": 1.0,
+        "p4096": 0.95,
+        "p8192": 0.8,
+        "p16384": 0.0,
+        "seconds": 23.655694792047143,
+        "ms_per_move": 0.2063728542568627,
+        "results": [
+          {
+            "seed": 1000000,
+            "steps": 1601,
+            "spawn_return": 3522.0,
+            "board_sum": 3524,
+            "max_tile": 2048,
+            "merge_score": 31320.0,
+            "legacy_score": 7.048
+          },
+          {
+            "seed": 1000001,
+            "steps": 3733,
+            "spawn_return": 8322.0,
+            "board_sum": 8324,
+            "max_tile": 4096,
+            "merge_score": 80976.0,
+            "legacy_score": 16.648
+          },
+          {
+            "seed": 1000002,
+            "steps": 5035,
+            "spawn_return": 11038.0,
+            "board_sum": 11040,
+            "max_tile": 8192,
+            "merge_score": 121788.0,
+            "legacy_score": 22.08
+          },
+          {
+            "seed": 1000003,
+            "steps": 8360,
+            "spawn_return": 18442.0,
+            "board_sum": 18444,
+            "max_tile": 8192,
+            "merge_score": 201392.0,
+            "legacy_score": 36.888
+          },
+          {
+            "seed": 1000004,
+            "steps": 6084,
+            "spawn_return": 13400.0,
+            "board_sum": 13402,
+            "max_tile": 8192,
+            "merge_score": 148452.0,
+            "legacy_score": 26.804
+          },
+          {
+            "seed": 1000005,
+            "steps": 6540,
+            "spawn_return": 14342.0,
+            "board_sum": 14346,
+            "max_tile": 8192,
+            "merge_score": 157228.0,
+            "legacy_score": 28.692
+          },
+          {
+            "seed": 1000006,
+            "steps": 3387,
+            "spawn_return": 7460.0,
+            "board_sum": 7462,
+            "max_tile": 4096,
+            "merge_score": 74748.0,
+            "legacy_score": 14.924
+          },
+          {
+            "seed": 1000007,
+            "steps": 5379,
+            "spawn_return": 11896.0,
+            "board_sum": 11898,
+            "max_tile": 8192,
+            "merge_score": 128000.0,
+            "legacy_score": 23.796
+          },
+          {
+            "seed": 1000008,
+            "steps": 7821,
+            "spawn_return": 17288.0,
+            "board_sum": 17290,
+            "max_tile": 8192,
+            "merge_score": 191280.0,
+            "legacy_score": 34.58
+          },
+          {
+            "seed": 1000009,
+            "steps": 4725,
+            "spawn_return": 10324.0,
+            "board_sum": 10326,
+            "max_tile": 8192,
+            "merge_score": 113316.0,
+            "legacy_score": 20.652
+          },
+          {
+            "seed": 1000010,
+            "steps": 5301,
+            "spawn_return": 11666.0,
+            "board_sum": 11668,
+            "max_tile": 8192,
+            "merge_score": 127952.0,
+            "legacy_score": 23.336
+          },
+          {
+            "seed": 1000011,
+            "steps": 6439,
+            "spawn_return": 14222.0,
+            "board_sum": 14224,
+            "max_tile": 8192,
+            "merge_score": 156312.0,
+            "legacy_score": 28.448
+          },
+          {
+            "seed": 1000012,
+            "steps": 6600,
+            "spawn_return": 14530.0,
+            "board_sum": 14532,
+            "max_tile": 8192,
+            "merge_score": 158180.0,
+            "legacy_score": 29.064
+          },
+          {
+            "seed": 1000013,
+            "steps": 7537,
+            "spawn_return": 16602.0,
+            "board_sum": 16604,
+            "max_tile": 8192,
+            "merge_score": 178800.0,
+            "legacy_score": 33.208
+          },
+          {
+            "seed": 1000014,
+            "steps": 6475,
+            "spawn_return": 14216.0,
+            "board_sum": 14220,
+            "max_tile": 8192,
+            "merge_score": 156204.0,
+            "legacy_score": 28.44
+          },
+          {
+            "seed": 1000015,
+            "steps": 6485,
+            "spawn_return": 14230.0,
+            "board_sum": 14232,
+            "max_tile": 8192,
+            "merge_score": 156500.0,
+            "legacy_score": 28.464
+          },
+          {
+            "seed": 1000016,
+            "steps": 6373,
+            "spawn_return": 14058.0,
+            "board_sum": 14060,
+            "max_tile": 8192,
+            "merge_score": 154328.0,
+            "legacy_score": 28.12
+          },
+          {
+            "seed": 1000017,
+            "steps": 6986,
+            "spawn_return": 15340.0,
+            "board_sum": 15342,
+            "max_tile": 8192,
+            "merge_score": 168104.0,
+            "legacy_score": 30.684
+          },
+          {
+            "seed": 1000018,
+            "steps": 5967,
+            "spawn_return": 13052.0,
+            "board_sum": 13054,
+            "max_tile": 8192,
+            "merge_score": 138812.0,
+            "legacy_score": 26.108
+          },
+          {
+            "seed": 1000019,
+            "steps": 3798,
+            "spawn_return": 8346.0,
+            "board_sum": 8348,
+            "max_tile": 4096,
+            "merge_score": 81292.0,
+            "legacy_score": 16.696
+          }
+        ]
+      },
+      "world_run": "checkpoints/latent2048_policy_repair_seed0",
+      "source_log_sha256": "8aa763b7ef05668b5937071d8a0e941a96808b4b9eaf82e76556bd05ebb062d3",
+      "recorded_at": "2026-10-11",
+      "model": {
+        "model_type": "latent_afterstate_ppo",
+        "architecture": "vit",
+        "policy_version": 1,
+        "world_config": {
+          "model_type": "latent_dreamer",
+          "model_version": 2,
+          "architecture": "latent_transformer",
+          "width": 128,
+          "latent_dim": 16,
+          "tokenizer_layers": 2,
+          "dynamics_layers": 2,
+          "heads": 4,
+          "events": 33,
+          "tile_classes": 32,
+          "transformer_version": 2,
+          "transition_kind": "linear_residual",
+          "state_head_version": 3
+        }
+      },
+      "search_budget": 0,
+      "training_seed": 0,
+      "recorded_settings": {
+        "gamma": 0.999,
+        "td_steps": 10,
+        "td_lambda": 0.5,
+        "lr_schedule": "adaptive_kl"
+      },
+      "source_checkpoint": "checkpoints/latent_afterstate_vit_repaired_adaptive_seed0/best.pt",
+      "evaluation_seeds": [
+        1000000,
+        1000001,
+        1000002,
+        1000003,
+        1000004,
+        1000005,
+        1000006,
+        1000007,
+        1000008,
+        1000009,
+        1000010,
+        1000011,
+        1000012,
+        1000013,
+        1000014,
+        1000015,
+        1000016,
+        1000017,
+        1000018,
+        1000019
+      ]
+    }
+  ],
+  "training_snapshots": [
+    {
+      "id": "opd_alphazero_cnn2x2",
+      "label": "On-policy distillation · CNN2×2 · AlphaZero teacher",
+      "status": "training",
+      "target_iterations": 20000,
+      "through_iteration": 3825,
+      "checkpoint_iteration": 3725,
+      "teacher": "alphazero",
+      "teacher_search_budget": 100,
+      "search_budget": 0,
+      "log": "assets/logs/opd_alphazero_cnn2x2.jsonl",
+      "source_log": "checkpoints/opd_alphazero_cnn2x2/metrics.jsonl",
+      "recorded_at": "2026-10-11",
+      "snapshot_log_sha256": "0570d28339e9ac9a83956a0a164b10dc83a66db771feca1e50f8d7f36123d74c",
+      "source_snapshot_sha256": "8c4db9ccc5cdef69ece558347bdae953e909cd70829383595bb62df45a0d99c3",
+      "metrics": {
+        "episodes": 10,
+        "seed": 1000000,
+        "score_metric": "spawn_mass",
+        "mean_score": 3100.4,
+        "mean_return": 3100.4,
+        "mean_spawn_return": 3100.4,
+        "mean_board_sum": 3102.6,
+        "mean_merge_score": 26501.2,
+        "mean_steps": 1406.8,
+        "max_tile": 2048,
+        "p512": 1.0,
+        "p1024": 0.9,
+        "p2048": 0.8,
+        "p4096": 0.0,
+        "p8192": 0.0,
+        "p16384": 0.0,
+        "seconds": 0.2360798749141395,
+        "ms_per_move": 0.0167813388480338,
+        "results": [
+          {
+            "seed": 1000000,
+            "steps": 469,
+            "spawn_return": 1032.0,
+            "board_sum": 1034,
+            "max_tile": 512,
+            "merge_score": 6760.0,
+            "legacy_score": 2.068
+          },
+          {
+            "seed": 1000001,
+            "steps": 1842,
+            "spawn_return": 4044.0,
+            "board_sum": 4046,
+            "max_tile": 2048,
+            "merge_score": 35464.0,
+            "legacy_score": 8.092
+          },
+          {
+            "seed": 1000002,
+            "steps": 1526,
+            "spawn_return": 3370.0,
+            "board_sum": 3372,
+            "max_tile": 2048,
+            "merge_score": 28700.0,
+            "legacy_score": 6.744
+          },
+          {
+            "seed": 1000003,
+            "steps": 626,
+            "spawn_return": 1416.0,
+            "board_sum": 1418,
+            "max_tile": 1024,
+            "merge_score": 11084.0,
+            "legacy_score": 2.836
+          },
+          {
+            "seed": 1000004,
+            "steps": 1468,
+            "spawn_return": 3230.0,
+            "board_sum": 3232,
+            "max_tile": 2048,
+            "merge_score": 27904.0,
+            "legacy_score": 6.464
+          },
+          {
+            "seed": 1000005,
+            "steps": 2016,
+            "spawn_return": 4402.0,
+            "board_sum": 4406,
+            "max_tile": 2048,
+            "merge_score": 38100.0,
+            "legacy_score": 8.812
+          },
+          {
+            "seed": 1000006,
+            "steps": 1456,
+            "spawn_return": 3216.0,
+            "board_sum": 3218,
+            "max_tile": 2048,
+            "merge_score": 27836.0,
+            "legacy_score": 6.436
+          },
+          {
+            "seed": 1000007,
+            "steps": 1497,
+            "spawn_return": 3300.0,
+            "board_sum": 3302,
+            "max_tile": 2048,
+            "merge_score": 29100.0,
+            "legacy_score": 6.604
+          },
+          {
+            "seed": 1000008,
+            "steps": 1439,
+            "spawn_return": 3196.0,
+            "board_sum": 3198,
+            "max_tile": 2048,
+            "merge_score": 27596.0,
+            "legacy_score": 6.396
+          },
+          {
+            "seed": 1000009,
+            "steps": 1729,
+            "spawn_return": 3798.0,
+            "board_sum": 3800,
+            "max_tile": 2048,
+            "merge_score": 32468.0,
+            "legacy_score": 7.6
+          }
+        ]
+      }
     }
   ]
 }

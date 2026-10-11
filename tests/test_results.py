@@ -41,9 +41,9 @@ def test_high_tile_rates_are_recovered_from_games_and_extend_automatically(tmp_p
 def test_published_snapshots_match_logs_and_inference_checkpoints():
     root = Path(__file__).resolve().parents[1]
     report = json.loads((root / 'assets/results.json').read_text())
-    for run in report['runs']:
+    for run in report['runs'] + report.get('training_snapshots', []):
         metrics = run['metrics']
-        assert [g['seed'] for g in metrics['results']] == report['evaluation_seeds']
+        assert [g['seed'] for g in metrics['results']] == run.get('evaluation_seeds', report['evaluation_seeds'])
         assert metrics['mean_steps'] == pytest.approx(np.mean([g['steps'] for g in metrics['results']]))
         for tile in tile_thresholds(metrics['max_tile']):
             assert metrics[f'p{tile}'] == pytest.approx(tile_reach_rate(metrics, tile))
@@ -56,10 +56,11 @@ def test_published_snapshots_match_logs_and_inference_checkpoints():
         assert rows[-1]['iteration'] == run['through_iteration']
         selected = next(r for r in rows if r['iteration'] == run['checkpoint_iteration'])
         assert selected['validation'] == metrics
-        data = torch.load(root / run['checkpoint'], map_location='cpu', weights_only=True)
-        assert data['iteration'] == run['checkpoint_iteration']
-        assert data['model_config'] == run['model']
-        assert data['reward_objective'] == 'spawn_mass' and data['inference_only']
+        if 'checkpoint' in run:
+            data = torch.load(root / run['checkpoint'], map_location='cpu', weights_only=True)
+            assert data['iteration'] == run['checkpoint_iteration']
+            assert data['model_config'] == run['model']
+            assert data['reward_objective'] == 'spawn_mass' and data['inference_only']
 
 
 def test_completed_latent_snapshots_preserve_real_validation_results():
