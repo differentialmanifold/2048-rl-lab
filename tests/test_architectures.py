@@ -211,19 +211,15 @@ def test_shrinking_residual_shortcut_covers_the_board_and_carries_gradients():
     assert block.shortcut[1].weight.grad.abs().sum() > 0
 
 
-@pytest.mark.parametrize('model_type', ['actor_critic', 'muzero'])
 @pytest.mark.parametrize('old_version', [None, 2])
-def test_cnn2x2_version_metadata_prevents_loading_former_architecture(tmp_path, model_type, old_version):
-    from algorithms.muzero import MuZeroNetwork
-    model = (ActorCritic(architecture='cnn2x2') if model_type == 'actor_critic'
-             else MuZeroNetwork(architecture='cnn2x2'))
+def test_cnn2x2_version_metadata_prevents_loading_former_architecture(tmp_path, old_version):
+    model = ActorCritic(architecture='cnn2x2')
     assert model.model_config['encoder_version'] == 3
     restored = model_from_config(model.model_config)
-    encoder = restored if model_type == 'actor_critic' else restored.encoder
-    assert encoder.trunk[0].layers[0].weight.shape == (64, 17, 2, 2)
+    assert restored.trunk[0].layers[0].weight.shape == (64, 17, 2, 2)
     path = tmp_path / 'old.pt'
     save_checkpoint(path, model, torch.optim.Adam(model.parameters()), 1,
-                    'a2c' if model_type == 'actor_critic' else 'muzero', {}, 0.)
+                    'a2c', {}, 0.)
     data = read_checkpoint(path)
     if old_version is None:
         del data['model_config']['encoder_version']
@@ -238,16 +234,13 @@ def test_cnn2x2_version_metadata_prevents_loading_former_architecture(tmp_path, 
         model_from_config(data['model_config'])
 
 
-@pytest.mark.parametrize('model_type', ['actor_critic', 'muzero'])
 @pytest.mark.parametrize('old_version', [None, 1])
-def test_vit_version_rejects_former_cls_checkpoints(tmp_path, model_type, old_version):
-    from algorithms.muzero import MuZeroNetwork
-    model = (ActorCritic(architecture='vit') if model_type == 'actor_critic'
-             else MuZeroNetwork(architecture='vit'))
+def test_vit_version_rejects_former_cls_checkpoints(tmp_path, old_version):
+    model = ActorCritic(architecture='vit')
     assert model.model_config['encoder_version'] == 2
     path = tmp_path / 'vit.pt'
     save_checkpoint(path, model, torch.optim.Adam(model.parameters()), 1,
-                    'a2c' if model_type == 'actor_critic' else 'muzero', {}, 0.)
+                    'a2c', {}, 0.)
     data = read_checkpoint(path)
     if old_version is None:
         del data['model_config']['encoder_version']

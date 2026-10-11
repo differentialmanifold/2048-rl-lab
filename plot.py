@@ -107,7 +107,8 @@ def plot_results(results, output=None):
     labels = [r['label'] + (' †' if r.get('historical_configuration') else '') for r in runs]
     thresholds = tile_thresholds(max(r['metrics']['max_tile'] for r in runs))
     rates = np.array([[100 * tile_reach_rate(r['metrics'], t) for t in thresholds] for r in runs])
-    fig, (left, right) = plt.subplots(1, 2, figsize=(13, 5.6), gridspec_kw={'width_ratios': [1.1, 1]})
+    height = 5.6 + .35 * max(0, len(runs) - 6)
+    fig, (left, right) = plt.subplots(1, 2, figsize=(13, height), gridspec_kw={'width_ratios': [1.1, 1]})
     fig.subplots_adjust(left=.19, right=.98, bottom=.25, top=.80, wspace=.15)
     fig.suptitle('2048 · recorded algorithm results', fontsize=19, weight='bold', y=.97)
     fig.text(.5, .90, f"Snapshot {report['recorded_at']} · 10 games each · seeds 1,000,000–1,000,009",

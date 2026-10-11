@@ -60,3 +60,25 @@ def test_published_snapshots_match_logs_and_inference_checkpoints():
         assert data['iteration'] == run['checkpoint_iteration']
         assert data['model_config'] == run['model']
         assert data['reward_objective'] == 'spawn_mass' and data['inference_only']
+
+
+def test_completed_latent_snapshots_preserve_real_validation_results():
+    root = Path(__file__).resolve().parents[1]
+    report = json.loads((root / 'assets/latent_imagination_results.json').read_text())
+    for run in report['runs']:
+        assert run['status'] == 'complete'
+        assert run['through_iteration'] == run['target_iterations'] == 20000
+        log = root / run['log']
+        assert hashlib.sha256(log.read_bytes()).hexdigest() == run['snapshot_log_sha256']
+        rows = read_metrics(log)
+        assert [r['iteration'] for r in rows] == list(range(20001))
+        assert rows[-1]['stop_reason'] == 'iteration_limit'
+        best = max((r for r in rows if r.get('validation')),
+                   key=lambda r: r['validation']['mean_spawn_return'])
+        assert best['iteration'] == run['checkpoint_iteration']
+        assert best['validation'] == run['metrics']
+        games = run['metrics']['results']
+        assert [g['seed'] for g in games] == list(range(1000000, 1000020))
+        assert run['metrics']['mean_steps'] == pytest.approx(np.mean([g['steps'] for g in games]))
+        for tile in tile_thresholds(run['metrics']['max_tile']):
+            assert run['metrics'][f'p{tile}'] == pytest.approx(tile_reach_rate(run['metrics'], tile))

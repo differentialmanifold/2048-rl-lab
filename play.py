@@ -47,11 +47,6 @@ def make_agent(agent, checkpoint=None, budget=500, seed=None, device='cpu'):
             return int(softmax_visit_probs(root.children, 0).argmax())
         metadata['search_budget'] = budget
         metadata['reward_objective'] = 'spawn_mass'
-    elif agent == 'muzero':
-        from algorithms.muzero import search_controller
-        action = search_controller(model, budget, data['config'].get('gamma', 1.),
-                                   data['config'].get('search_depth', 10), seed)
-        metadata.update(search_budget=budget, search_depth=data['config'].get('search_depth', 10))
     elif agent == 'ppo_afterstate':
         from algorithms.ppo_afterstate import afterstate_action
         action = lambda state, info: afterstate_action(model, state, info)
@@ -98,7 +93,7 @@ def play(agent=None, seed=None, label='Human', auto=False, delay=.1, max_steps=N
                 if command == 'q':
                     break
                 if command in ('', 'h', 'p') and agent is None:
-                    message = 'Choose --agent a2c, ppo, ppo_afterstate, alphazero, muzero, latent_imagination, mcts to use an agent.'
+                    message = 'Choose --agent a2c, ppo, opd, ppo_afterstate, alphazero, latent_imagination, mcts to use an agent.'
                     continue
                 if command == 'p':
                     auto = True
@@ -130,7 +125,7 @@ def play(agent=None, seed=None, label='Human', auto=False, delay=.1, max_steps=N
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--agent', choices=['human', 'mcts', 'a2c', 'ppo', 'ppo_afterstate', 'alphazero', 'muzero', 'latent_imagination', 'latent_afterstate_ppo'], default='human')
+    parser.add_argument('--agent', choices=['human', 'mcts', 'a2c', 'ppo', 'opd', 'ppo_afterstate', 'alphazero', 'latent_imagination', 'latent_afterstate_ppo'], default='human')
     parser.add_argument('--checkpoint', help='Full checkpoint or bundled pretrained/*.pt export')
     parser.add_argument('--budget', type=int, default=500)
     parser.add_argument('--seed', type=int, help='Optional reproducible session; defaults to fresh OS randomness')

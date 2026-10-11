@@ -12,7 +12,8 @@ A compact research codebase with independent algorithm implementations, recorded
 | --- | --- | --- |
 | [MCTS](algorithms/mcts_chance.py) | UCT action selection, resampled tile spawns, full random rollouts | No neural network |
 | [A2C](algorithms/a2c.py) | Fresh episodes, TD(λ) advantages, one actor–critic update | CNN2×2 |
-| [PPO](algorithms/ppo.py) | TD(λ) advantages, clipped updates, shuffled minibatches, KL guard | CNN2×2 / ViT |
+| [PPO](algorithms/ppo.py) | TD(λ) advantages, clipped updates, shuffled minibatches, KL guard | CNN2×2 / ViT; optional [D4 augmentation](docs/ppo-symmetry.md) |
+| [On-policy distillation](docs/on-policy-distillation.md) | Student rollouts, frozen PPO or current-student AlphaZero search teacher, reverse KL | CNN2×2 · PPO teacher |
 | [PPO Afterstate](docs/ppo-afterstate.md) | Shared candidate-afterstate scoring, separate tile spawn, PPO with TD(λ) | CNN2×2 / ViT |
 | [Latent Imagination RL](docs/latent-imagination.md) | Learn a world model, imagine latent games, reinforce the policy | ViT adaptive LR / CNN2×2 constant LR |
 | [AlphaZero](algorithms/alphazero.py) | Search with the game rules, root-visit policy targets, D4 augmentation | CNN2×2 |
@@ -29,10 +30,12 @@ A compact research codebase with independent algorithm implementations, recorded
 | PPO · ViT | 0 | 4,346.8 | 100% | 100% | 40% | 0% |
 | AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
 | PPO Afterstate · CNN2×2 | 0 | 6,930.7 | 100% | 100% | 90% | 20% |
+| PPO · CNN2×2 · D4 | 0 | 3,049.1 | 100% | 80% | 10% | 0% |
+| OPD (PPO teacher) · CNN2×2 | 0 | 5,033.8 | 100% | 90% | 80% | 0% |
 
 All rows use **10 games with environment seeds `1000000…1000009`**. MCTS was evaluated at 100 simulations per move; AlphaZero also uses 100 simulations. A2C/PPO use the policy directly. The neural rows are the validation results of the bundled checkpoints, so they include checkpoint-selection effects. Training budgets differ; this is a descriptive comparison, not a controlled ranking.
 
-**Updated: 2026-10-07.** The original A2C/PPO snapshots were refreshed on 2026-09-23; their logs contain 20,000 iterations with TD(λ), n=10, λ=0.5, γ=0.999. The A2C/CNN2×2 and PPO/ViT weights are the best validation checkpoints at iterations 18,400 and 19,975. AlphaZero retains its earlier snapshot through iteration 542. Checkpoint iterations, per-game outcomes, and provenance are in [results.json](assets/results.json); MCTS outcomes are in [mcts.json](assets/mcts.json).
+**Updated: 2026-10-11.** PPO D4 and PPO-teacher distillation have completed 20,000 iterations. The original A2C/PPO snapshots were refreshed on 2026-09-23; their logs contain 20,000 iterations with TD(λ), n=10, λ=0.5, γ=0.999. The A2C/CNN2×2 and PPO/ViT weights are the best validation checkpoints at iterations 18,400 and 19,975. AlphaZero retains its earlier snapshot through iteration 542. Checkpoint iterations, per-game outcomes, and provenance are in [results.json](assets/results.json); MCTS outcomes are in [mcts.json](assets/mcts.json).
 
 The following figures are regenerated from the published [log snapshots](assets/logs). The left panel shows training and validation episode length; the right panel shows inclusive tile-reaching rates from **512 through 16384**, extending automatically for larger tiles. Faint lines are raw observations; solid lines average 50 training iterations or five validation checks. The star marks the highest validation spawn return. Reaching a tile in one game does not imply that the selected checkpoint reaches it reliably. MCTS has no training curve and appears in the overview above.
 
@@ -48,6 +51,18 @@ The following figures are regenerated from the published [log snapshots](assets/
 
 ![PPO · ViT: survival and tile reach rates](assets/ppo_vit.png)
 
+### PPO · CNN2×2 · D4 augmentation
+
+![PPO · CNN2×2 · D4 augmentation](assets/ppo_d4_cnn2x2.png)
+
+Completed 20,000 iterations. The best validation checkpoint at iteration 18,900 averages 3,049.1 moves over 10 games. D4 augmentation reduces direction bias, with residual bias and lower full-game performance than the original PPO. See the [guide](docs/ppo-symmetry.md).
+
+### On-policy distillation · CNN2×2 · PPO teacher
+
+![On-policy distillation · CNN2×2 · PPO teacher](assets/opd_ppo_cnn2x2.png)
+
+Completed 20,000 iterations. The best validation checkpoint at iteration 15,625 averages 5,033.8 moves over 10 games, reaching 8192 in 80%. The student collects its own games and learns from the frozen PPO teacher; inference uses the student directly. Its weights are bundled; see the [guide](docs/on-policy-distillation.md).
+
 ### PPO Afterstate · CNN2×2
 
 ![PPO Afterstate · CNN2×2](assets/ppo_afterstate_cnn2x2.png)
@@ -58,7 +73,7 @@ The following figures are regenerated from the published [log snapshots](assets/
 
 ![Latent Imagination RL · ViT · adaptive KL](assets/latent_imagination_vit.png)
 
-2026-10-07: training in progress, snapshot through iteration 9,625 of 20,000. The best real-game validation at iteration 9,250 averages 3,666.55 moves over 20 games, reaching 4096 in 90% and 8192 in 30%. This uses 20 validation games; the overview table uses 10. World construction and both policy commands are in the [guide](docs/latent-imagination.md); records are in [latent_imagination_results.json](assets/latent_imagination_results.json).
+2026-10-11: completed 20,000 iterations. The best real-game validation at iteration 18,925 averages 5,731.3 moves over 20 games, reaching 4096 in 95% and 8192 in 80%. This uses 20 validation games; the overview table uses 10. World construction and both policy commands are in the [guide](docs/latent-imagination.md); records are in [latent_imagination_results.json](assets/latent_imagination_results.json).
 
 ### AlphaZero · CNN2×2
 
@@ -84,6 +99,10 @@ The game starts with one tile on a 4×4 board. Each valid move spawns 2 with pro
 All neural trainers default to **TD(λ), n=10, λ=0.5, γ=0.999**. Value targets mix one- through ten-step returns. A2C/PPO bootstrap from the frozen collection critic; AlphaZero uses recorded search values. Rewards and values use units of spawn mass / 128; logs report raw returns. True terminal bootstrap is zero.
 
 ## Train from scratch
+
+[On-policy distillation (OPD)](docs/on-policy-distillation.md) trains a CNN2×2 student with a frozen PPO teacher or its own AlphaZero search. The guide includes training, resume and evaluation commands.
+
+PPO supports D4 rotation/reflection consistency during training with `--symmetry d4`. See the [guide](docs/ppo-symmetry.md).
 
 [PPO Afterstate](docs/ppo-afterstate.md) trains directly from scratch. The [latent-world guide](docs/latent-imagination.md) uses `pipeline world` to construct the world and `pipeline imagine` to learn a policy.
 
@@ -144,14 +163,16 @@ If 20,000 iterations are complete, this adds 10,000. Architecture and unspecifie
 
 ## Inspect pretrained agents
 
-Bundled A2C, PPO, PPO Afterstate and AlphaZero agents default to CNN2×2. PPO also provides ViT; latent PPO uses your own checkpoint. Interactive sessions use **fresh randomness on every launch**; `--seed` is optional for reproducing a game.
+Bundled A2C, PPO, OPD, PPO Afterstate and AlphaZero agents default to CNN2×2. PPO also provides ViT and D4 variants; Latent Imagination RL uses your own checkpoint. Interactive sessions use **fresh randomness on every launch**; `--seed` is optional for reproducing a game.
 
 ```sh
 .venv/bin/python play.py --agent mcts --budget 100
 .venv/bin/python play.py --agent a2c
 .venv/bin/python play.py --agent ppo
+.venv/bin/python play.py --agent opd
 .venv/bin/python play.py --agent ppo_afterstate
 .venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_vit.pt
+.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_d4_cnn2x2.pt
 .venv/bin/python play.py --agent alphazero --budget 100
 ```
 

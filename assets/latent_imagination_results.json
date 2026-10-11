@@ -1,436 +1,438 @@
 {
-  "recorded_at": "2026-10-07",
-  "protocol": "In-progress checkpoint-selection validation in the real 2048 environment; 20 fixed-seed games. Training uses a frozen learned latent world.",
+  "recorded_at": "2026-10-11",
+  "protocol": "Completed 20,000-iteration runs; checkpoint-selection validation in the real 2048 environment over 20 fixed-seed games. Training uses a frozen learned latent world.",
   "runs": [
     {
       "id": "latent_imagination_vit",
-      "label": "Latent Imagination RL \u00b7 vit",
-      "status": "training",
+      "label": "Latent Imagination RL · ViT",
+      "status": "complete",
       "target_iterations": 20000,
-      "through_iteration": 9625,
-      "checkpoint_iteration": 9250,
+      "through_iteration": 20000,
+      "checkpoint_iteration": 18925,
       "lr_schedule": "adaptive_kl",
       "log": "assets/logs/latent_imagination_vit.jsonl",
-      "snapshot_log_sha256": "903ee0eded4e1e77229c1979403d658a39ccfacabd7c1993a21f600ecdf75cb7",
+      "snapshot_log_sha256": "e8e27b9ff4ad9968b5e8c393086b6b25ac52326794e2de0db1f0d9486ca8d41a",
       "metrics": {
         "episodes": 20,
         "seed": 1000000,
         "score_metric": "spawn_mass",
-        "mean_score": 8074.0,
-        "mean_return": 8074.0,
-        "mean_spawn_return": 8074.0,
-        "mean_board_sum": 8076.2,
-        "mean_merge_score": 82529.6,
-        "mean_steps": 3666.55,
+        "mean_score": 12614.8,
+        "mean_return": 12614.8,
+        "mean_spawn_return": 12614.8,
+        "mean_board_sum": 12617.0,
+        "mean_merge_score": 136249.2,
+        "mean_steps": 5731.3,
         "max_tile": 8192,
         "p512": 1.0,
-        "p1024": 0.95,
-        "p2048": 0.95,
-        "p4096": 0.9,
-        "p8192": 0.3,
+        "p1024": 1.0,
+        "p2048": 1.0,
+        "p4096": 0.95,
+        "p8192": 0.8,
         "p16384": 0.0,
-        "seconds": 13.735591917065904,
-        "ms_per_move": 0.18730948598908925,
+        "seconds": 23.655694792047143,
+        "ms_per_move": 0.2063728542568627,
         "results": [
           {
             "seed": 1000000,
-            "steps": 3776,
-            "spawn_return": 8332.0,
-            "board_sum": 8334,
-            "max_tile": 4096,
-            "merge_score": 81156.0,
-            "legacy_score": 16.668
+            "steps": 1601,
+            "spawn_return": 3522.0,
+            "board_sum": 3524,
+            "max_tile": 2048,
+            "merge_score": 31320.0,
+            "legacy_score": 7.048
           },
           {
             "seed": 1000001,
-            "steps": 2726,
-            "spawn_return": 6048.0,
-            "board_sum": 6050,
+            "steps": 3733,
+            "spawn_return": 8322.0,
+            "board_sum": 8324,
             "max_tile": 4096,
-            "merge_score": 59584.0,
-            "legacy_score": 12.1
+            "merge_score": 80976.0,
+            "legacy_score": 16.648
           },
           {
             "seed": 1000002,
-            "steps": 3701,
-            "spawn_return": 8110.0,
-            "board_sum": 8112,
-            "max_tile": 4096,
-            "merge_score": 79952.0,
-            "legacy_score": 16.224
+            "steps": 5035,
+            "spawn_return": 11038.0,
+            "board_sum": 11040,
+            "max_tile": 8192,
+            "merge_score": 121788.0,
+            "legacy_score": 22.08
           },
           {
             "seed": 1000003,
-            "steps": 3719,
-            "spawn_return": 8230.0,
-            "board_sum": 8232,
-            "max_tile": 4096,
-            "merge_score": 80476.0,
-            "legacy_score": 16.464
+            "steps": 8360,
+            "spawn_return": 18442.0,
+            "board_sum": 18444,
+            "max_tile": 8192,
+            "merge_score": 201392.0,
+            "legacy_score": 36.888
           },
           {
             "seed": 1000004,
-            "steps": 4545,
-            "spawn_return": 9988.0,
-            "board_sum": 9990,
+            "steps": 6084,
+            "spawn_return": 13400.0,
+            "board_sum": 13402,
             "max_tile": 8192,
-            "merge_score": 110576.0,
-            "legacy_score": 19.98
+            "merge_score": 148452.0,
+            "legacy_score": 26.804
           },
           {
             "seed": 1000005,
-            "steps": 3738,
-            "spawn_return": 8226.0,
-            "board_sum": 8230,
-            "max_tile": 4096,
-            "merge_score": 80552.0,
-            "legacy_score": 16.46
+            "steps": 6540,
+            "spawn_return": 14342.0,
+            "board_sum": 14346,
+            "max_tile": 8192,
+            "merge_score": 157228.0,
+            "legacy_score": 28.692
           },
           {
             "seed": 1000006,
-            "steps": 5429,
-            "spawn_return": 11954.0,
-            "board_sum": 11956,
-            "max_tile": 8192,
-            "merge_score": 128872.0,
-            "legacy_score": 23.912
+            "steps": 3387,
+            "spawn_return": 7460.0,
+            "board_sum": 7462,
+            "max_tile": 4096,
+            "merge_score": 74748.0,
+            "legacy_score": 14.924
           },
           {
             "seed": 1000007,
-            "steps": 3673,
-            "spawn_return": 8076.0,
-            "board_sum": 8078,
-            "max_tile": 4096,
-            "merge_score": 79460.0,
-            "legacy_score": 16.156
+            "steps": 5379,
+            "spawn_return": 11896.0,
+            "board_sum": 11898,
+            "max_tile": 8192,
+            "merge_score": 128000.0,
+            "legacy_score": 23.796
           },
           {
             "seed": 1000008,
-            "steps": 3707,
-            "spawn_return": 8250.0,
-            "board_sum": 8252,
-            "max_tile": 4096,
-            "merge_score": 80540.0,
-            "legacy_score": 16.504
+            "steps": 7821,
+            "spawn_return": 17288.0,
+            "board_sum": 17290,
+            "max_tile": 8192,
+            "merge_score": 191280.0,
+            "legacy_score": 34.58
           },
           {
             "seed": 1000009,
-            "steps": 3803,
-            "spawn_return": 8328.0,
-            "board_sum": 8330,
-            "max_tile": 4096,
-            "merge_score": 81264.0,
-            "legacy_score": 16.66
+            "steps": 4725,
+            "spawn_return": 10324.0,
+            "board_sum": 10326,
+            "max_tile": 8192,
+            "merge_score": 113316.0,
+            "legacy_score": 20.652
           },
           {
             "seed": 1000010,
-            "steps": 3292,
-            "spawn_return": 7206.0,
-            "board_sum": 7208,
-            "max_tile": 4096,
-            "merge_score": 71596.0,
-            "legacy_score": 14.416
+            "steps": 5301,
+            "spawn_return": 11666.0,
+            "board_sum": 11668,
+            "max_tile": 8192,
+            "merge_score": 127952.0,
+            "legacy_score": 23.336
           },
           {
             "seed": 1000011,
-            "steps": 651,
-            "spawn_return": 1452.0,
-            "board_sum": 1454,
-            "max_tile": 512,
-            "merge_score": 10060.0,
-            "legacy_score": 2.908
+            "steps": 6439,
+            "spawn_return": 14222.0,
+            "board_sum": 14224,
+            "max_tile": 8192,
+            "merge_score": 156312.0,
+            "legacy_score": 28.448
           },
           {
             "seed": 1000012,
-            "steps": 4716,
-            "spawn_return": 10420.0,
-            "board_sum": 10422,
+            "steps": 6600,
+            "spawn_return": 14530.0,
+            "board_sum": 14532,
             "max_tile": 8192,
-            "merge_score": 113728.0,
-            "legacy_score": 20.844
+            "merge_score": 158180.0,
+            "legacy_score": 29.064
           },
           {
             "seed": 1000013,
-            "steps": 3591,
-            "spawn_return": 7956.0,
-            "board_sum": 7958,
-            "max_tile": 4096,
-            "merge_score": 78620.0,
-            "legacy_score": 15.916
+            "steps": 7537,
+            "spawn_return": 16602.0,
+            "board_sum": 16604,
+            "max_tile": 8192,
+            "merge_score": 178800.0,
+            "legacy_score": 33.208
           },
           {
             "seed": 1000014,
-            "steps": 4202,
-            "spawn_return": 9224.0,
-            "board_sum": 9228,
+            "steps": 6475,
+            "spawn_return": 14216.0,
+            "board_sum": 14220,
             "max_tile": 8192,
-            "merge_score": 103712.0,
-            "legacy_score": 18.456
+            "merge_score": 156204.0,
+            "legacy_score": 28.44
           },
           {
             "seed": 1000015,
-            "steps": 2846,
-            "spawn_return": 6260.0,
-            "board_sum": 6262,
-            "max_tile": 4096,
-            "merge_score": 61232.0,
-            "legacy_score": 12.524
+            "steps": 6485,
+            "spawn_return": 14230.0,
+            "board_sum": 14232,
+            "max_tile": 8192,
+            "merge_score": 156500.0,
+            "legacy_score": 28.464
           },
           {
             "seed": 1000016,
-            "steps": 1919,
-            "spawn_return": 4186.0,
-            "board_sum": 4188,
-            "max_tile": 2048,
-            "merge_score": 36680.0,
-            "legacy_score": 8.376
+            "steps": 6373,
+            "spawn_return": 14058.0,
+            "board_sum": 14060,
+            "max_tile": 8192,
+            "merge_score": 154328.0,
+            "legacy_score": 28.12
           },
           {
             "seed": 1000017,
-            "steps": 4321,
-            "spawn_return": 9500.0,
-            "board_sum": 9502,
+            "steps": 6986,
+            "spawn_return": 15340.0,
+            "board_sum": 15342,
             "max_tile": 8192,
-            "merge_score": 105620.0,
-            "legacy_score": 19.004
+            "merge_score": 168104.0,
+            "legacy_score": 30.684
           },
           {
             "seed": 1000018,
-            "steps": 5430,
-            "spawn_return": 11944.0,
-            "board_sum": 11946,
+            "steps": 5967,
+            "spawn_return": 13052.0,
+            "board_sum": 13054,
             "max_tile": 8192,
-            "merge_score": 129820.0,
-            "legacy_score": 23.892
+            "merge_score": 138812.0,
+            "legacy_score": 26.108
           },
           {
             "seed": 1000019,
-            "steps": 3546,
-            "spawn_return": 7790.0,
-            "board_sum": 7792,
+            "steps": 3798,
+            "spawn_return": 8346.0,
+            "board_sum": 8348,
             "max_tile": 4096,
-            "merge_score": 77092.0,
-            "legacy_score": 15.584
+            "merge_score": 81292.0,
+            "legacy_score": 16.696
           }
         ]
       },
       "world_run": "checkpoints/latent2048_policy_repair_seed0",
-      "source_log_sha256": "a41b8606ffb4647860da120ffc55f0dc2f9e9e2d5abb5ae111c53335330bdb98"
+      "source_log_sha256": "8aa763b7ef05668b5937071d8a0e941a96808b4b9eaf82e76556bd05ebb062d3",
+      "recorded_at": "2026-10-11"
     },
     {
       "id": "latent_imagination_cnn2x2",
-      "label": "Latent Imagination RL \u00b7 cnn2x2",
-      "status": "training",
+      "label": "Latent Imagination RL · CNN2×2",
+      "status": "complete",
       "target_iterations": 20000,
-      "through_iteration": 11275,
-      "checkpoint_iteration": 10825,
+      "through_iteration": 20000,
+      "checkpoint_iteration": 19475,
       "lr_schedule": "constant",
       "log": "assets/logs/latent_imagination_cnn2x2.jsonl",
-      "snapshot_log_sha256": "a28b1196d1ea9faa8b408ba78d2cbc8386d346978b791049ffcadf340b5aa4d1",
+      "snapshot_log_sha256": "fe2a1e8518ce5b3c8b9b7dd43be44afc1da86dc099523a351c08d563024175ef",
       "metrics": {
         "episodes": 20,
         "seed": 1000000,
         "score_metric": "spawn_mass",
-        "mean_score": 8612.0,
-        "mean_return": 8612.0,
-        "mean_spawn_return": 8612.0,
-        "mean_board_sum": 8614.2,
-        "mean_merge_score": 89407.6,
-        "mean_steps": 3912.35,
+        "mean_score": 10514.1,
+        "mean_return": 10514.1,
+        "mean_spawn_return": 10514.1,
+        "mean_board_sum": 10516.3,
+        "mean_merge_score": 111317.0,
+        "mean_steps": 4775.85,
         "max_tile": 8192,
-        "p512": 0.95,
-        "p1024": 0.95,
+        "p512": 1.0,
+        "p1024": 1.0,
         "p2048": 0.95,
-        "p4096": 0.9,
-        "p8192": 0.35,
+        "p4096": 0.95,
+        "p8192": 0.6,
         "p16384": 0.0,
-        "seconds": 10.797172624850646,
-        "ms_per_move": 0.13798832702660352,
+        "seconds": 14.473796334117651,
+        "ms_per_move": 0.15153110267405437,
         "results": [
           {
             "seed": 1000000,
-            "steps": 4885,
-            "spawn_return": 10752.0,
-            "board_sum": 10754,
+            "steps": 6435,
+            "spawn_return": 14138.0,
+            "board_sum": 14140,
             "max_tile": 8192,
-            "merge_score": 119776.0,
-            "legacy_score": 21.508
+            "merge_score": 155616.0,
+            "legacy_score": 28.28
           },
           {
             "seed": 1000001,
-            "steps": 3088,
-            "spawn_return": 6854.0,
-            "board_sum": 6856,
-            "max_tile": 4096,
-            "merge_score": 68512.0,
-            "legacy_score": 13.712
+            "steps": 6016,
+            "spawn_return": 13342.0,
+            "board_sum": 13344,
+            "max_tile": 8192,
+            "merge_score": 147984.0,
+            "legacy_score": 26.688
           },
           {
             "seed": 1000002,
-            "steps": 3755,
-            "spawn_return": 8272.0,
-            "board_sum": 8274,
-            "max_tile": 4096,
-            "merge_score": 80756.0,
-            "legacy_score": 16.548
+            "steps": 6912,
+            "spawn_return": 15142.0,
+            "board_sum": 15144,
+            "max_tile": 8192,
+            "merge_score": 164168.0,
+            "legacy_score": 30.288
           },
           {
             "seed": 1000003,
-            "steps": 3844,
-            "spawn_return": 8506.0,
-            "board_sum": 8508,
+            "steps": 3423,
+            "spawn_return": 7586.0,
+            "board_sum": 7588,
             "max_tile": 4096,
-            "merge_score": 82372.0,
-            "legacy_score": 17.016
+            "merge_score": 75684.0,
+            "legacy_score": 15.176
           },
           {
             "seed": 1000004,
-            "steps": 3363,
-            "spawn_return": 7470.0,
-            "board_sum": 7472,
+            "steps": 3670,
+            "spawn_return": 8122.0,
+            "board_sum": 8124,
             "max_tile": 4096,
-            "merge_score": 74668.0,
-            "legacy_score": 14.944
+            "merge_score": 79968.0,
+            "legacy_score": 16.248
           },
           {
             "seed": 1000005,
-            "steps": 3578,
-            "spawn_return": 7828.0,
-            "board_sum": 7832,
+            "steps": 3692,
+            "spawn_return": 8126.0,
+            "board_sum": 8130,
             "max_tile": 4096,
-            "merge_score": 77304.0,
-            "legacy_score": 15.664
+            "merge_score": 79724.0,
+            "legacy_score": 16.26
           },
           {
             "seed": 1000006,
-            "steps": 1770,
-            "spawn_return": 3890.0,
-            "board_sum": 3892,
-            "max_tile": 2048,
-            "merge_score": 34532.0,
-            "legacy_score": 7.784
+            "steps": 5629,
+            "spawn_return": 12358.0,
+            "board_sum": 12360,
+            "max_tile": 8192,
+            "merge_score": 133300.0,
+            "legacy_score": 24.72
           },
           {
             "seed": 1000007,
-            "steps": 4300,
-            "spawn_return": 9520.0,
-            "board_sum": 9522,
-            "max_tile": 8192,
-            "merge_score": 105560.0,
-            "legacy_score": 19.044
+            "steps": 3334,
+            "spawn_return": 7390.0,
+            "board_sum": 7392,
+            "max_tile": 4096,
+            "merge_score": 72472.0,
+            "legacy_score": 14.784
           },
           {
             "seed": 1000008,
-            "steps": 3410,
-            "spawn_return": 7574.0,
-            "board_sum": 7576,
-            "max_tile": 4096,
-            "merge_score": 75560.0,
-            "legacy_score": 15.152
+            "steps": 4568,
+            "spawn_return": 10190.0,
+            "board_sum": 10192,
+            "max_tile": 8192,
+            "merge_score": 111904.0,
+            "legacy_score": 20.384
           },
           {
             "seed": 1000009,
-            "steps": 3658,
-            "spawn_return": 8014.0,
-            "board_sum": 8016,
-            "max_tile": 4096,
-            "merge_score": 79416.0,
-            "legacy_score": 16.032
+            "steps": 5446,
+            "spawn_return": 11930.0,
+            "board_sum": 11932,
+            "max_tile": 8192,
+            "merge_score": 130084.0,
+            "legacy_score": 23.864
           },
           {
             "seed": 1000010,
-            "steps": 2860,
-            "spawn_return": 6276.0,
-            "board_sum": 6278,
-            "max_tile": 4096,
-            "merge_score": 61072.0,
-            "legacy_score": 12.556
+            "steps": 5902,
+            "spawn_return": 12964.0,
+            "board_sum": 12966,
+            "max_tile": 8192,
+            "merge_score": 139128.0,
+            "legacy_score": 25.932
           },
           {
             "seed": 1000011,
-            "steps": 294,
-            "spawn_return": 660.0,
-            "board_sum": 662,
-            "max_tile": 256,
-            "merge_score": 3544.0,
-            "legacy_score": 1.324
+            "steps": 3729,
+            "spawn_return": 8234.0,
+            "board_sum": 8236,
+            "max_tile": 4096,
+            "merge_score": 80520.0,
+            "legacy_score": 16.472
           },
           {
             "seed": 1000012,
-            "steps": 3724,
-            "spawn_return": 8192.0,
-            "board_sum": 8194,
-            "max_tile": 4096,
-            "merge_score": 80412.0,
-            "legacy_score": 16.388
+            "steps": 1168,
+            "spawn_return": 2568.0,
+            "board_sum": 2570,
+            "max_tile": 1024,
+            "merge_score": 20024.0,
+            "legacy_score": 5.14
           },
           {
             "seed": 1000013,
-            "steps": 6450,
-            "spawn_return": 14220.0,
-            "board_sum": 14222,
-            "max_tile": 8192,
-            "merge_score": 156296.0,
-            "legacy_score": 28.444
+            "steps": 2444,
+            "spawn_return": 5400.0,
+            "board_sum": 5402,
+            "max_tile": 4096,
+            "merge_score": 53052.0,
+            "legacy_score": 10.804
           },
           {
             "seed": 1000014,
-            "steps": 3614,
-            "spawn_return": 7982.0,
-            "board_sum": 7986,
-            "max_tile": 4096,
-            "merge_score": 78272.0,
-            "legacy_score": 15.972
+            "steps": 5692,
+            "spawn_return": 12466.0,
+            "board_sum": 12470,
+            "max_tile": 8192,
+            "merge_score": 134048.0,
+            "legacy_score": 24.94
           },
           {
             "seed": 1000015,
-            "steps": 4541,
-            "spawn_return": 9974.0,
-            "board_sum": 9976,
-            "max_tile": 8192,
-            "merge_score": 110452.0,
-            "legacy_score": 19.952
+            "steps": 4016,
+            "spawn_return": 8796.0,
+            "board_sum": 8798,
+            "max_tile": 4096,
+            "merge_score": 85940.0,
+            "legacy_score": 17.596
           },
           {
             "seed": 1000016,
-            "steps": 3990,
-            "spawn_return": 8788.0,
-            "board_sum": 8790,
-            "max_tile": 4096,
-            "merge_score": 91928.0,
-            "legacy_score": 17.58
+            "steps": 7125,
+            "spawn_return": 15674.0,
+            "board_sum": 15676,
+            "max_tile": 8192,
+            "merge_score": 172108.0,
+            "legacy_score": 31.352
           },
           {
             "seed": 1000017,
-            "steps": 5644,
-            "spawn_return": 12346.0,
-            "board_sum": 12348,
+            "steps": 5359,
+            "spawn_return": 11780.0,
+            "board_sum": 11782,
             "max_tile": 8192,
-            "merge_score": 133464.0,
-            "legacy_score": 24.696
+            "merge_score": 128908.0,
+            "legacy_score": 23.564
           },
           {
             "seed": 1000018,
-            "steps": 6588,
-            "spawn_return": 14362.0,
-            "board_sum": 14364,
+            "steps": 5255,
+            "spawn_return": 11510.0,
+            "board_sum": 11512,
             "max_tile": 8192,
-            "merge_score": 157444.0,
-            "legacy_score": 28.728
+            "merge_score": 127004.0,
+            "legacy_score": 23.024
           },
           {
             "seed": 1000019,
-            "steps": 4891,
-            "spawn_return": 10760.0,
-            "board_sum": 10762,
+            "steps": 5702,
+            "spawn_return": 12566.0,
+            "board_sum": 12568,
             "max_tile": 8192,
-            "merge_score": 116812.0,
-            "legacy_score": 21.524
+            "merge_score": 134704.0,
+            "legacy_score": 25.136
           }
         ]
       },
       "world_run": "checkpoints/latent2048_policy_repair_seed0",
-      "source_log_sha256": "8ef3d05441b591ac647180707de4977fcc7fe90ac06465384856289fcc97b2cf"
+      "source_log_sha256": "8b280963f2fed2cf5461ea072de39e17e8aac0e1759d55d8620a01a3805b96a4",
+      "recorded_at": "2026-10-11"
     }
   ]
 }

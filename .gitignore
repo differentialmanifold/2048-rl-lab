@@ -12,3 +12,7 @@ __pycache__/
 !pretrained/*.pt
 experiments/
 checkpoints/
+algorithms/latent_language/
+docs/latent-language*.md
+tests/test_latent_language.py
+requirements-llm.txt

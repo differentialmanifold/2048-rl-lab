@@ -209,9 +209,6 @@ def model_from_config(config):
     if model_type == 'ppo_afterstate':
         from algorithms.ppo_afterstate import AfterstateActorCritic
         return AfterstateActorCritic(**config)
-    if model_type == 'muzero':
-        from algorithms.muzero import MuZeroNetwork
-        return MuZeroNetwork(**config)
     if model_type == 'latent_dreamer':
         from algorithms.latent_imagination.world.model import WorldModel
         return WorldModel(**config)

@@ -83,7 +83,7 @@
   --checkpoint checkpoints/latent_imagination_vit_seed0/best.pt --auto
 ```
 
-续训恢复世界模型、策略、优化器及学习率调度状态，CNN2×2 换成对应目录。当前正在训练的旧 checkpoint 也可用新入口续训，传入原来的 `last.pt` 路径即可。
+续训恢复世界模型、策略、优化器及学习率调度状态，CNN2×2 换成对应目录。旧 checkpoint 也可用新入口续训，传入原来的 `last.pt` 路径即可。
 
 输出为 `last.pt`、`best.pt`、`metrics.jsonl`、`training.png` 和学习率曲线 `optimization.png`。每个训练目录保持一个写入进程。
 
@@ -91,11 +91,11 @@
 
 公开结果使用此前训练的基础模型和探索策略；从零命令的初始化与训练历史不同。
 
-2026-10-07 快照：ViT 动态学习率训练至第 9,625 轮，CNN2×2 固定学习率至第 11,275 轮，两者目标均为 20,000 轮。以下为真实环境的最佳 20 局固定 seed 验证结果；训练完成后可更新公开日志与图。
+2026-10-11 快照：两种策略均已完成 20,000 轮。以下为真实环境的最佳 20 局固定 seed（`1000000…1000019`）验证结果，数据见 [latent_imagination_results.json](../assets/latent_imagination_results.json)。
 
 | 策略 | 最佳轮次 | 平均步数 | Spawn return | ≥4096 | ≥8192 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| ViT · adaptive KL | 9,250 | 3,666.55 | 8,074.0 | 90% | 30% |
-| CNN2×2 · constant | 10,825 | 3,912.35 | 8,612.0 | 90% | 35% |
+| ViT · adaptive KL | 18,925 | 5,731.3 | 12,614.8 | 95% | 80% |
+| CNN2×2 · constant | 19,475 | 4,775.85 | 10,514.1 | 95% | 60% |
 
 ![Latent Imagination RL · ViT · adaptive KL](../assets/latent_imagination_vit.png)

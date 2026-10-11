@@ -91,11 +91,11 @@ Outputs: `last.pt`, `best.pt`, `metrics.jsonl`, `training.png` and `optimization
 
 The snapshot uses a previously trained base world and exploration policy. Fresh commands have different initialization and training history.
 
-2026-10-07 snapshot: ViT adaptive KL through iteration 9,625, CNN2×2 constant LR through 11,275; both target 20,000. The table reports their best real-environment validation over 20 fixed-seed games. Refresh the published logs and plots after training completes.
+2026-10-11 snapshot: both policies have completed 20,000 iterations. The table reports their best real-environment validation over 20 fixed-seed games (`1000000…1000019`). Records are in [latent_imagination_results.json](../assets/latent_imagination_results.json).
 
 | Policy | Best iteration | Mean moves | Spawn return | ≥4096 | ≥8192 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| ViT · adaptive KL | 9,250 | 3,666.55 | 8,074.0 | 90% | 30% |
-| CNN2×2 · constant | 10,825 | 3,912.35 | 8,612.0 | 90% | 35% |
+| ViT · adaptive KL | 18,925 | 5,731.3 | 12,614.8 | 95% | 80% |
+| CNN2×2 · constant | 19,475 | 4,775.85 | 10,514.1 | 95% | 60% |
 
 ![Latent Imagination RL · ViT · adaptive KL](../assets/latent_imagination_vit.png)

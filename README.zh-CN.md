@@ -12,7 +12,8 @@
 | --- | --- | --- |
 | [MCTS](algorithms/mcts_chance.py) | UCT 选择动作、重新采样随机落子、完整随机模拟 | 无神经网络 |
 | [A2C](algorithms/a2c.py) | 采集新轨迹、计算 TD(λ) 优势、一次 actor–critic 更新 | CNN2×2 |
-| [PPO](algorithms/ppo.py) | TD(λ) 优势、裁剪更新、随机 minibatch、KL 检查 | CNN2×2 / ViT |
+| [PPO](algorithms/ppo.py) | TD(λ) 优势、裁剪更新、随机 minibatch、KL 检查 | CNN2×2 / ViT；可选 [D4 增强](docs/ppo-symmetry.zh-CN.md) |
+| [On-policy distillation](docs/on-policy-distillation.zh-CN.md) | 学生采样、冻结 PPO 或当前学生的 AlphaZero 搜索教师、反向 KL 蒸馏 | CNN2×2 · PPO 教师 |
 | [PPO Afterstate](docs/ppo-afterstate.zh-CN.md) | 候选 afterstate 共享评分、独立随机落子、PPO 与 TD(λ) | CNN2×2 / ViT |
 | [隐空间想象强化学习](docs/latent-imagination.zh-CN.md) | 构建世界模型、隐空间想象、策略强化学习 | ViT 动态学习率 / CNN2×2 固定学习率 |
 | [AlphaZero](algorithms/alphazero.py) | 使用游戏规则搜索、拟合访问次数策略、D4 对称增强 | CNN2×2 |
@@ -29,10 +30,12 @@
 | PPO · ViT | 0 | 4,346.8 | 100% | 100% | 40% | 0% |
 | AlphaZero · CNN2×2 | 100 | 3,576.4 | 90% | 90% | 30% | 0% |
 | PPO Afterstate · CNN2×2 | 0 | 6,930.7 | 100% | 100% | 90% | 20% |
+| PPO · CNN2×2 · D4 | 0 | 3,049.1 | 100% | 80% | 10% | 0% |
+| OPD（PPO 教师）· CNN2×2 | 0 | 5,033.8 | 100% | 90% | 80% | 0% |
 
 上表各行均使用 **10 局，环境 seed 为 `1000000…1000009`**。MCTS 和 AlphaZero 每步搜索 100 次；A2C/PPO 直接使用策略网络。神经网络行对应随项目发布的 checkpoint 验证成绩，包含挑选 checkpoint 的影响。训练预算不同，这张图用于展示已记录的表现，不构成严格控制变量的排名。
 
-**更新日期：2026-10-07。** 原有 A2C/PPO 快照更新于 2026-09-23，日志均包含 20,000 次迭代，采用 TD(λ)，n=10、λ=0.5、γ=0.999。A2C/CNN2×2 和 PPO/ViT 权重分别为第 18,400 和 19,975 次迭代的最佳验证 checkpoint。AlphaZero 保留此前截至第 542 次迭代的快照。checkpoint 迭代数、逐局成绩和来源信息见 [results.json](assets/results.json)，MCTS 逐局成绩见 [mcts.json](assets/mcts.json)。
+**更新日期：2026-10-11。** PPO D4 和 PPO 教师蒸馏均已完成 20,000 轮。原有 A2C/PPO 快照更新于 2026-09-23，日志均包含 20,000 次迭代，采用 TD(λ)，n=10、λ=0.5、γ=0.999。A2C/CNN2×2 和 PPO/ViT 权重分别为第 18,400 和 19,975 次迭代的最佳验证 checkpoint。AlphaZero 保留此前截至第 542 次迭代的快照。checkpoint 迭代数、逐局成绩和来源信息见 [results.json](assets/results.json)，MCTS 逐局成绩见 [mcts.json](assets/mcts.json)。
 
 下列图片根据公开的[日志快照](assets/logs)重画。左图展示训练与验证的平均步数；右图展示 **512 至 16384** 的累计达标率，出现更大方块时自动扩展。淡线表示原始数据，实线表示 50 次训练迭代或 5 次验证的滑动均值，星号标记最高验证 spawn 回报。某局达到大块，并不意味着选中的 checkpoint 能稳定达到它。MCTS 没有训练过程，因此在上方概览中展示。
 
@@ -48,6 +51,18 @@
 
 ![PPO · ViT: survival and tile reach rates](assets/ppo_vit.png)
 
+### PPO · CNN2×2 · D4 对称增强
+
+![PPO · CNN2×2 · D4 对称增强](assets/ppo_d4_cnn2x2.png)
+
+已完成 20,000 轮；最佳验证 checkpoint 为第 18,900 轮，10 局平均 3,049.1 步。D4 增强减轻了方向偏好，但仍有残留，且从头开局表现低于原 PPO。使用方法见 [独立文档](docs/ppo-symmetry.zh-CN.md)。
+
+### On-policy distillation · CNN2×2 · PPO 教师
+
+![On-policy distillation · CNN2×2 · PPO 教师](assets/opd_ppo_cnn2x2.png)
+
+已完成 20,000 轮；最佳验证 checkpoint 为第 15,625 轮，10 局平均 5,033.8 步，≥8192 为 80%。学生在自己采集的对局上学习冻结 PPO 教师的动作分布，推理直接使用学生。已附带推理权重，使用方法见 [独立文档](docs/on-policy-distillation.zh-CN.md)。
+
 ### PPO Afterstate · CNN2×2
 
 ![PPO Afterstate · CNN2×2](assets/ppo_afterstate_cnn2x2.png)
@@ -58,7 +73,7 @@
 
 ![隐空间想象强化学习 · ViT · 动态学习率](assets/latent_imagination_vit.png)
 
-2026-10-07：训练中，快照至第 9,625 轮／目标 20,000 轮。最佳真实环境验证位于第 9,250 轮，20 局平均 3,666.55 步，≥4096 为 90%，≥8192 为 30%。这里使用 20 局验证；上方结果表使用 10 局。世界模型构建及两种策略命令见[独立文档](docs/latent-imagination.zh-CN.md)，数据见 [latent_imagination_results.json](assets/latent_imagination_results.json)。
+2026-10-11：已完成 20,000 轮。最佳真实环境验证位于第 18,925 轮，20 局平均 5,731.3 步，≥4096 为 95%，≥8192 为 80%。这里使用 20 局验证；上方结果表使用 10 局。世界模型构建及两种策略命令见[独立文档](docs/latent-imagination.zh-CN.md)，数据见 [latent_imagination_results.json](assets/latent_imagination_results.json)。
 
 ### AlphaZero · CNN2×2
 
@@ -84,6 +99,10 @@ python3 -m venv .venv
 所有神经网络算法默认使用 **TD(λ)，n=10、λ=0.5、γ=0.999**，价值标签混合一步至十步回报。A2C/PPO 使用采集时冻结的 critic 自举，AlphaZero 使用保存的搜索价值。训练内部的奖励和价值除以 128，日志使用原始回报；真实终局自举为零。
 
 ## 从零训练
+
+[On-policy distillation（OPD）](docs/on-policy-distillation.zh-CN.md) 使用冻结 PPO 教师或学生自身的 AlphaZero 搜索训练 CNN2×2 学生。训练、续训和评估命令见独立文档。
+
+普通 PPO 支持训练时的 D4 旋转／镜像一致性约束：`--symmetry d4`。使用方法见 [PPO 对称增强](docs/ppo-symmetry.zh-CN.md)。
 
 [PPO Afterstate](docs/ppo-afterstate.zh-CN.md) 支持直接从零训练；[隐空间方案](docs/latent-imagination.zh-CN.md) 通过 `pipeline world` 完整构建世界模型，再用 `pipeline imagine` 训练策略。
 
@@ -144,14 +163,16 @@ python3 -m venv .venv
 
 ## 体验预训练模型
 
-附带的 A2C、PPO、PPO Afterstate 和 AlphaZero 默认载入 CNN2×2 模型，PPO 另提供 ViT；隐空间 PPO 使用自己的 checkpoint。交互游戏**每次启动使用新的随机性**，只有需要复现时才显式传入 `--seed`。
+附带的 A2C、PPO、OPD、PPO Afterstate 和 AlphaZero 默认载入 CNN2×2 模型，PPO 另提供 ViT 和 D4 版本；隐空间想象强化学习使用自己的 checkpoint。交互游戏**每次启动使用新的随机性**，只有需要复现时才显式传入 `--seed`。
 
 ```sh
 .venv/bin/python play.py --agent mcts --budget 100
 .venv/bin/python play.py --agent a2c
 .venv/bin/python play.py --agent ppo
+.venv/bin/python play.py --agent opd
 .venv/bin/python play.py --agent ppo_afterstate
 .venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_vit.pt
+.venv/bin/python play.py --agent ppo --checkpoint pretrained/ppo_d4_cnn2x2.pt
 .venv/bin/python play.py --agent alphazero --budget 100
 ```
 

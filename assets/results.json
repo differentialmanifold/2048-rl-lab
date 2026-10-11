@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-10-07",
+  "recorded_at": "2026-10-11",
   "evaluation_seeds": [
     1000000,
     1000001,
@@ -141,7 +141,7 @@
     },
     {
       "id": "a2c_cnn2x2",
-      "label": "A2C \u00b7 CNN2\u00d72",
+      "label": "A2C · CNN2×2",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -279,7 +279,7 @@
     },
     {
       "id": "ppo_cnn2x2",
-      "label": "PPO \u00b7 CNN2\u00d72",
+      "label": "PPO · CNN2×2",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -416,7 +416,7 @@
     },
     {
       "id": "ppo_vit",
-      "label": "PPO \u00b7 ViT",
+      "label": "PPO · ViT",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -554,7 +554,7 @@
     },
     {
       "id": "alphazero_cnn2x2",
-      "label": "AlphaZero \u00b7 CNN2\u00d72",
+      "label": "AlphaZero · CNN2×2",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -691,7 +691,7 @@
     },
     {
       "id": "ppo_afterstate_cnn2x2",
-      "label": "PPO Afterstate \u00b7 CNN2\u00d72",
+      "label": "PPO Afterstate · CNN2×2",
       "model": {
         "obs_dim": 16,
         "num_actions": 4,
@@ -827,6 +827,287 @@
       "recorded_at": "2026-10-07",
       "source_checkpoint": "checkpoints/ppo_afterstate_cnn2x2_td_seed0_klfix/best.pt",
       "source_log_sha256": "c5b6a99ffa4eb5e21736c83d383b2c0d7156e11485180e27d4a1b3eb02607a4c"
+    },
+    {
+      "id": "ppo_d4_cnn2x2",
+      "label": "PPO · CNN2×2 · D4",
+      "model": {
+        "obs_dim": 16,
+        "num_actions": 4,
+        "architecture": "cnn2x2",
+        "encoder_version": 3
+      },
+      "search_budget": 0,
+      "checkpoint": "pretrained/ppo_d4_cnn2x2.pt",
+      "training_seed": 0,
+      "recorded_settings": {
+        "gamma": 0.999,
+        "td_steps": 10,
+        "td_lambda": 0.5,
+        "symmetry": "d4",
+        "symmetry_policy_coef": 0.1,
+        "symmetry_value_coef": 0.1
+      },
+      "source_checkpoint": "checkpoints/ppo_cnn2x2_d4_seed0/best.pt",
+      "through_iteration": 20000,
+      "checkpoint_iteration": 18900,
+      "log": "assets/logs/ppo_d4_cnn2x2.jsonl",
+      "snapshot_log_sha256": "2079a27f0321ee224331293c32d8b6833026e687fcabb19fab3fd4172628a323",
+      "source_log_sha256": "f1f1fcd2c4228311d171a3bf0d7c163e1b6ac9eaa3e2b085268ea959b8ca0250",
+      "recorded_at": "2026-10-11",
+      "metrics": {
+        "episodes": 10,
+        "seed": 1000000,
+        "score_metric": "spawn_mass",
+        "mean_score": 6725.2,
+        "mean_return": 6725.2,
+        "mean_spawn_return": 6725.2,
+        "mean_board_sum": 6727.4,
+        "mean_merge_score": 66803.2,
+        "mean_steps": 3049.1,
+        "max_tile": 8192,
+        "p512": 1.0,
+        "p1024": 1.0,
+        "p2048": 1.0,
+        "p4096": 0.8,
+        "p8192": 0.1,
+        "p16384": 0.0,
+        "seconds": 0.5433088329154998,
+        "ms_per_move": 0.017818662323816858,
+        "results": [
+          {
+            "seed": 1000000,
+            "steps": 1901,
+            "spawn_return": 4180.0,
+            "board_sum": 4182,
+            "max_tile": 2048,
+            "merge_score": 36484.0,
+            "legacy_score": 8.364
+          },
+          {
+            "seed": 1000001,
+            "steps": 1826,
+            "spawn_return": 4028.0,
+            "board_sum": 4030,
+            "max_tile": 2048,
+            "merge_score": 35544.0,
+            "legacy_score": 8.06
+          },
+          {
+            "seed": 1000002,
+            "steps": 3466,
+            "spawn_return": 7634.0,
+            "board_sum": 7636,
+            "max_tile": 4096,
+            "merge_score": 75708.0,
+            "legacy_score": 15.272
+          },
+          {
+            "seed": 1000003,
+            "steps": 3334,
+            "spawn_return": 7402.0,
+            "board_sum": 7404,
+            "max_tile": 4096,
+            "merge_score": 72732.0,
+            "legacy_score": 14.808
+          },
+          {
+            "seed": 1000004,
+            "steps": 3634,
+            "spawn_return": 8046.0,
+            "board_sum": 8048,
+            "max_tile": 4096,
+            "merge_score": 79112.0,
+            "legacy_score": 16.096
+          },
+          {
+            "seed": 1000005,
+            "steps": 3024,
+            "spawn_return": 6640.0,
+            "board_sum": 6644,
+            "max_tile": 4096,
+            "merge_score": 67228.0,
+            "legacy_score": 13.288
+          },
+          {
+            "seed": 1000006,
+            "steps": 2914,
+            "spawn_return": 6418.0,
+            "board_sum": 6420,
+            "max_tile": 4096,
+            "merge_score": 63616.0,
+            "legacy_score": 12.84
+          },
+          {
+            "seed": 1000007,
+            "steps": 3107,
+            "spawn_return": 6838.0,
+            "board_sum": 6840,
+            "max_tile": 4096,
+            "merge_score": 68556.0,
+            "legacy_score": 13.68
+          },
+          {
+            "seed": 1000008,
+            "steps": 2764,
+            "spawn_return": 6156.0,
+            "board_sum": 6158,
+            "max_tile": 4096,
+            "merge_score": 60200.0,
+            "legacy_score": 12.316
+          },
+          {
+            "seed": 1000009,
+            "steps": 4521,
+            "spawn_return": 9910.0,
+            "board_sum": 9912,
+            "max_tile": 8192,
+            "merge_score": 108852.0,
+            "legacy_score": 19.824
+          }
+        ]
+      }
+    },
+    {
+      "id": "opd_ppo_cnn2x2",
+      "label": "OPD · CNN2×2",
+      "model": {
+        "obs_dim": 16,
+        "num_actions": 4,
+        "architecture": "cnn2x2",
+        "encoder_version": 3
+      },
+      "search_budget": 0,
+      "checkpoint": "pretrained/opd_cnn2x2.pt",
+      "training_seed": 0,
+      "recorded_settings": {
+        "gamma": 0.999,
+        "td_steps": 10,
+        "td_lambda": 0.5,
+        "teacher": "ppo",
+        "loss": "sampled"
+      },
+      "source_checkpoint": "checkpoints/opd_ppo_cnn2x2/best.pt",
+      "through_iteration": 20000,
+      "checkpoint_iteration": 15625,
+      "log": "assets/logs/opd_ppo_cnn2x2.jsonl",
+      "snapshot_log_sha256": "3dabc5b2efba7c2b9001e65fcf276411cf3946a93f93ae7a7152c3d82fcadd3e",
+      "source_log_sha256": "3a16060b6842e118efccfad5714f48bd63106d195a34ec803e79adf9f5b972e7",
+      "recorded_at": "2026-10-11",
+      "metrics": {
+        "episodes": 10,
+        "seed": 1000000,
+        "score_metric": "spawn_mass",
+        "mean_score": 11106.0,
+        "mean_return": 11106.0,
+        "mean_spawn_return": 11106.0,
+        "mean_board_sum": 11108.2,
+        "mean_merge_score": 119255.2,
+        "mean_steps": 5033.8,
+        "max_tile": 8192,
+        "p512": 1.0,
+        "p1024": 1.0,
+        "p2048": 1.0,
+        "p4096": 0.9,
+        "p8192": 0.8,
+        "p16384": 0.0,
+        "seconds": 2.4551768340170383,
+        "ms_per_move": 0.048773825619155275,
+        "results": [
+          {
+            "seed": 1000000,
+            "steps": 4735,
+            "spawn_return": 10448.0,
+            "board_sum": 10450,
+            "max_tile": 8192,
+            "merge_score": 114616.0,
+            "legacy_score": 20.9
+          },
+          {
+            "seed": 1000001,
+            "steps": 5473,
+            "spawn_return": 12118.0,
+            "board_sum": 12120,
+            "max_tile": 8192,
+            "merge_score": 131356.0,
+            "legacy_score": 24.24
+          },
+          {
+            "seed": 1000002,
+            "steps": 5600,
+            "spawn_return": 12332.0,
+            "board_sum": 12334,
+            "max_tile": 8192,
+            "merge_score": 133060.0,
+            "legacy_score": 24.668
+          },
+          {
+            "seed": 1000003,
+            "steps": 5606,
+            "spawn_return": 12386.0,
+            "board_sum": 12388,
+            "max_tile": 8192,
+            "merge_score": 133456.0,
+            "legacy_score": 24.776
+          },
+          {
+            "seed": 1000004,
+            "steps": 7297,
+            "spawn_return": 16152.0,
+            "board_sum": 16154,
+            "max_tile": 8192,
+            "merge_score": 175324.0,
+            "legacy_score": 32.308
+          },
+          {
+            "seed": 1000005,
+            "steps": 2425,
+            "spawn_return": 5288.0,
+            "board_sum": 5292,
+            "max_tile": 4096,
+            "merge_score": 52508.0,
+            "legacy_score": 10.584
+          },
+          {
+            "seed": 1000006,
+            "steps": 2109,
+            "spawn_return": 4650.0,
+            "board_sum": 4652,
+            "max_tile": 2048,
+            "merge_score": 40248.0,
+            "legacy_score": 9.304
+          },
+          {
+            "seed": 1000007,
+            "steps": 4095,
+            "spawn_return": 9064.0,
+            "board_sum": 9066,
+            "max_tile": 8192,
+            "merge_score": 102352.0,
+            "legacy_score": 18.132
+          },
+          {
+            "seed": 1000008,
+            "steps": 5571,
+            "spawn_return": 12330.0,
+            "board_sum": 12332,
+            "max_tile": 8192,
+            "merge_score": 132944.0,
+            "legacy_score": 24.664
+          },
+          {
+            "seed": 1000009,
+            "steps": 7427,
+            "spawn_return": 16292.0,
+            "board_sum": 16294,
+            "max_tile": 8192,
+            "merge_score": 176688.0,
+            "legacy_score": 32.588
+          }
+        ]
+      },
+      "teacher_checkpoint": "pretrained/ppo_cnn2x2.pt",
+      "teacher_checkpoint_sha256": "3a9d39d372c3d74c3cc1caf2dfb9734d1101fa49f7b65c0b8f211779ff293fb7"
     }
   ]
 }
