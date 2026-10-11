@@ -2,7 +2,9 @@
 
 **English** | [简体中文](latent-imagination.zh-CN.md)
 
-The [implementation](../algorithms/latent_imagination/) constructs a neural world model and learns a policy through imagined games in continuous latent space. The world predicts action effects, random spawns, rewards, legal directions and termination. The policy uses ViT or CNN2×2; the current optimizer is PPO with candidate afterstate representations.
+The [implementation](../algorithms/latent_imagination/) constructs a neural world model and learns a policy through imagined games in continuous latent space. The world predicts action effects, random spawns, rewards, legal directions and termination. The policy uses a spatial Transformer or CNN2×2; the current optimizer is PPO with candidate afterstate representations.
+
+Both policies share the same Transformer world model. `--architecture` selects only the policy: `vit` uses two attention blocks over 16 latent cell tokens, while `cnn2x2` applies convolutions to the 4×4 latent grid. The figures call the former a **Transformer policy** to distinguish it from the direct board-based PPO ViT.
 
 Imagined games encode a board only at reset, then advance through learned dynamics. Board rules and decoding provide offline supervision and acceptance checks. The world stays frozen during policy optimization; real games evaluate the policy and select `best.pt`.
 
@@ -30,7 +32,7 @@ The directory contains `base/`, `exploration/` and the final `world/`, with prog
 
 ## Learn in latent space
 
-### ViT · adaptive learning rate
+### Transformer policy · adaptive learning rate
 
 ```sh
 .venv/bin/python -m algorithms.latent_imagination.pipeline imagine \
@@ -49,7 +51,7 @@ The directory contains `base/`, `exploration/` and the final `world/`, with prog
 
 After 5 updates with rollout KL above 1.5 times the target, or KL stopping before one full pass, `adaptive_kl` multiplies the learning rate by 0.8. After 5 complete updates with KL below half the target, it multiplies by 1.1. Bounds are `[1e-6, 3e-4]`.
 
-### CNN2×2 · constant learning rate
+### CNN2×2 policy · constant learning rate
 
 ```sh
 .venv/bin/python -m algorithms.latent_imagination.pipeline imagine \
@@ -91,11 +93,11 @@ Outputs: `last.pt`, `best.pt`, `metrics.jsonl`, `training.png` and `optimization
 
 The snapshot uses a previously trained base world and exploration policy. Fresh commands have different initialization and training history.
 
-2026-10-11 snapshot: both policies have completed 20,000 iterations. The table reports their best real-environment validation over 20 fixed-seed games (`1000000…1000019`). Records are in [latent_imagination_results.json](../assets/latent_imagination_results.json).
+2026-10-11 snapshot: both policies have completed 20,000 iterations. The table reports their best real-environment validation. Evaluation settings and per-game outcomes are in [latent_imagination_results.json](../assets/latent_imagination_results.json).
 
 | Policy | Best iteration | Mean moves | Spawn return | ≥4096 | ≥8192 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| ViT · adaptive KL | 18,925 | 5,731.3 | 12,614.8 | 95% | 80% |
+| Transformer · adaptive KL | 18,925 | 5,731.3 | 12,614.8 | 95% | 80% |
 | CNN2×2 · constant | 19,475 | 4,775.85 | 10,514.1 | 95% | 60% |
 
-![Latent Imagination RL · ViT · adaptive KL](../assets/latent_imagination_vit.png)
+![Latent Imagination RL · Transformer policy · adaptive KL](../assets/latent_imagination_vit.png)

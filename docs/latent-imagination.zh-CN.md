@@ -2,7 +2,9 @@
 
 [English](latent-imagination.md) | **简体中文**
 
-[实现](../algorithms/latent_imagination/)先构建神经世界模型，再让策略在模型产生的连续隐状态中想象对局、学习获得更长的存活时间。世界模型负责动作后的变化、随机落子、奖励、合法方向和终止预测；策略可选 ViT 或 CNN2×2。目前的策略优化器采用 PPO，候选状态采用 afterstate 表示。
+[实现](../algorithms/latent_imagination/)先构建神经世界模型，再让策略在模型产生的连续隐状态中想象对局、学习获得更长的存活时间。世界模型负责动作后的变化、随机落子、奖励、合法方向和终止预测；策略可选空间 Transformer 或 CNN2×2。目前的策略优化器采用 PPO，候选状态采用 afterstate 表示。
+
+两种策略共用同一个 Transformer 世界模型。`--architecture` 只选择策略网络：`vit` 对 16 个隐空间格子 token 使用两层注意力，`cnn2x2` 对 4×4 隐状态网格使用卷积。图表将前者称为 **Transformer 策略**，以区别于直接读取棋盘的普通 PPO ViT。
 
 想象对局只在重置时编码初始棋盘，后续完全由学得的动力学递推。棋盘规则与解码器提供离线监督和核验；策略训练时世界模型冻结，真实环境对局用于评价并选择 `best.pt`。
 
@@ -30,7 +32,7 @@
 
 ## 在隐空间中学习
 
-### ViT · 动态学习率
+### Transformer 策略 · 动态学习率
 
 ```sh
 .venv/bin/python -m algorithms.latent_imagination.pipeline imagine \
@@ -49,7 +51,7 @@
 
 `adaptive_kl` 连续 5 轮全轨迹 KL 超过目标的 1.5 倍，或 KL 提前停止且不足一遍更新时，学习率乘 0.8；连续 5 轮完成全部 epoch 且 KL 低于目标的一半时，乘 1.1。学习率限制在 `[1e-6, 3e-4]`。
 
-### CNN2×2 · 固定学习率
+### CNN2×2 策略 · 固定学习率
 
 ```sh
 .venv/bin/python -m algorithms.latent_imagination.pipeline imagine \
@@ -91,11 +93,11 @@
 
 公开结果使用此前训练的基础模型和探索策略；从零命令的初始化与训练历史不同。
 
-2026-10-11 快照：两种策略均已完成 20,000 轮。以下为真实环境的最佳 20 局固定 seed（`1000000…1000019`）验证结果，数据见 [latent_imagination_results.json](../assets/latent_imagination_results.json)。
+2026-10-11 快照：两种策略均已完成 20,000 轮。以下为真实环境的最佳验证结果，评估配置和逐局成绩见 [latent_imagination_results.json](../assets/latent_imagination_results.json)。
 
 | 策略 | 最佳轮次 | 平均步数 | Spawn return | ≥4096 | ≥8192 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| ViT · adaptive KL | 18,925 | 5,731.3 | 12,614.8 | 95% | 80% |
+| Transformer · adaptive KL | 18,925 | 5,731.3 | 12,614.8 | 95% | 80% |
 | CNN2×2 · constant | 19,475 | 4,775.85 | 10,514.1 | 95% | 60% |
 
-![Latent Imagination RL · ViT · adaptive KL](../assets/latent_imagination_vit.png)
+![Latent Imagination RL · Transformer 策略 · adaptive KL](../assets/latent_imagination_vit.png)

@@ -104,22 +104,14 @@ def plot_results(results, output=None):
     runs = report['runs']
     output = Path(output or results.with_name('overview.png'))
     output.parent.mkdir(parents=True, exist_ok=True)
-    default_games = min(r['metrics']['episodes'] for r in runs)
-    labels = [r['label'] + (f" ({r['metrics']['episodes']} games)"
-                           if r['metrics']['episodes'] != default_games else '')
-              + (' †' if r.get('historical_configuration') else '') for r in runs]
+    labels = [r['label'] + (' †' if r.get('historical_configuration') else '') for r in runs]
     thresholds = tile_thresholds(max(r['metrics']['max_tile'] for r in runs))
     rates = np.array([[100 * tile_reach_rate(r['metrics'], t) for t in thresholds] for r in runs])
     height = 5.6 + .35 * max(0, len(runs) - 6)
     fig, (left, right) = plt.subplots(1, 2, figsize=(13, height), gridspec_kw={'width_ratios': [1.1, 1]})
-    fig.subplots_adjust(left=.24, right=.98, bottom=.25, top=.80, wspace=.15)
+    fig.subplots_adjust(left=.19, right=.98, bottom=.25, top=.80, wspace=.15)
     fig.suptitle('2048 · recorded algorithm results', fontsize=19, weight='bold', y=.97)
-    seed_start = min(r['metrics']['seed'] for r in runs)
-    seed_end = max(r['metrics']['seed'] + r['metrics']['episodes'] - 1 for r in runs)
-    games = f'{default_games} games per row'
-    if any(r['metrics']['episodes'] != default_games for r in runs):
-        games += ' unless labelled otherwise'
-    fig.text(.5, .90, f"Snapshot {report['recorded_at']} · {games} · seeds {seed_start:,}–{seed_end:,}",
+    fig.text(.5, .90, f"Snapshot {report['recorded_at']} · fixed-seed validation",
              ha='center', color='#526171', fontsize=10)
     positions = np.arange(len(runs))
     means = [r['metrics']['mean_steps'] for r in runs]
@@ -152,7 +144,7 @@ def plot_results(results, output=None):
                'This is a descriptive snapshot, not a controlled ranking.')
     if any(r.get('historical_configuration') for r in runs):
         caption += ' † Recorded before the current training defaults.'
-    fig.text(.24, .04, caption,
+    fig.text(.19, .04, caption,
              fontsize=9, color='#526171', linespacing=1.5)
     temporary = output.with_name(output.stem + '.tmp' + output.suffix)
     fig.savefig(temporary, dpi=160)

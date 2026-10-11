@@ -25,9 +25,9 @@ The same option supports ViT. `--symmetry none` is ordinary PPO. Resume restores
   --checkpoint pretrained/ppo_d4_cnn2x2.pt --auto
 ```
 
-## Recorded result
+## Training curve
 
-Completed 20,000 iterations. The best validation checkpoint at iteration 18,900 averages 3,049.1 moves over 10 fixed-seed games (`1000000…1000009`), reaching 4096 in 80% and 8192 in 10%. This run reduces direction bias but retains some bias and performs worse in full games than the original PPO.
+Completed 20,000 iterations.
 
 The bundled weights are inference-only. Per-game validation results and log provenance are in [results.json](../assets/results.json).
 

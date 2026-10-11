@@ -25,9 +25,9 @@ ViT 同样支持这个选项，`--symmetry none` 为普通 PPO。续训继承增
   --checkpoint pretrained/ppo_d4_cnn2x2.pt --auto
 ```
 
-## 已记录结果
+## 训练曲线
 
-已完成 20,000 轮。最佳验证 checkpoint 为第 18,900 轮，10 局固定 seed（`1000000…1000009`）平均 3,049.1 步，≥4096 为 80%，≥8192 为 10%。这项训练减轻了方向偏好，但仍有残留，且完整对局表现低于原 PPO。
+已完成 20,000 轮。
 
 附带权重仅供推理。逐局验证成绩和日志来源见 [results.json](../assets/results.json)。
 

@@ -4,7 +4,7 @@
   "runs": [
     {
       "id": "latent_imagination_vit",
-      "label": "Latent Imagination RL · ViT",
+      "label": "Latent Imagination RL · Transformer policy",
       "status": "complete",
       "target_iterations": 20000,
       "through_iteration": 20000,
@@ -220,7 +220,7 @@
     },
     {
       "id": "latent_imagination_cnn2x2",
-      "label": "Latent Imagination RL · CNN2×2",
+      "label": "Latent Imagination RL · CNN2×2 policy",
       "status": "complete",
       "target_iterations": 20000,
       "through_iteration": 20000,
